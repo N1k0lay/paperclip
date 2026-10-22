@@ -51,8 +51,12 @@ export const isAudio = (subject: ArtifactSubject) => subject.kind === "file" && 
 
 export const isMedia = (subject: ArtifactSubject) => subject.kind === "image" || subject.kind === "video" || isAudio(subject);
 
+/** A picture to print: the thumbnail, or for video its own stream (a poster is optional). */
+export const previewSourceOf = (subject: ArtifactSubject): string | null =>
+  subject.thumbnailUrl ?? (subject.kind === "video" ? subject.videoUrl ?? null : null);
+
 export function treatmentOf(subject: ArtifactSubject): Treatment {
-  if (subject.kind === "image" || subject.kind === "video") return subject.thumbnailUrl ? "media" : "media-fallback";
+  if (subject.kind === "image" || subject.kind === "video") return previewSourceOf(subject) ? "media" : "media-fallback";
   if (isAudio(subject)) return "media-fallback";
   if (subject.kind === "document" && subject.hasText) return "preview";
   return "icon";
@@ -154,14 +158,14 @@ export function subjectFromCompanyArtifact(artifact: CompanyArtifact): ArtifactS
   const filename = isTaskDocument ? null : filenameOf(artifact) ?? (/\.[a-z0-9]+$/i.test(artifact.title) ? artifact.title : null);
   const ext = extOf({ filename });
   const kind: ArtifactKind = isTaskDocument ? "document" : kindFor(ext, artifact.contentType, artifact.mediaKind);
-  const picture = kind === "image" || kind === "video" ? artifact.contentPath : null;
   return {
     kind,
     title: artifact.title,
     filename,
     ext,
     contentType: artifact.contentType,
-    thumbnailUrl: picture,
+    // A video has no poster of its own in this payload; the print plays its stream instead.
+    thumbnailUrl: kind === "image" ? artifact.contentPath : null,
     videoUrl: kind === "video" ? artifact.contentPath : null,
     hasText: Boolean(artifact.previewText?.trim()),
     isTaskDocument,

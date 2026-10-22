@@ -69,7 +69,11 @@ export function ArtifactRowIcon({ subject }: { subject: ArtifactSubject }) {
 function Thumbnail({ subject }: { subject: ArtifactSubject }) {
   return (
     <span className="relative block size-10 shrink-0 overflow-hidden rounded-(--sz-4px)">
-      <img src={subject.thumbnailUrl ?? undefined} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      {subject.kind === "video" && !subject.thumbnailUrl ? (
+        <video src={subject.videoUrl ?? undefined} className="absolute inset-0 h-full w-full object-cover" muted playsInline preload="metadata" />
+      ) : (
+        <img src={subject.thumbnailUrl ?? undefined} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      )}
       {subject.kind === "video" ? (
         <span aria-hidden className="absolute flex items-center justify-center rounded-full" style={{ left: ROW_PLAY.inset, top: ROW_PLAY.inset, width: ROW_PLAY.size, height: ROW_PLAY.size, background: "var(--artifact-play-scrim)" }}>
           <img src={panelPlay} alt="" width={ROW_PLAY.icon} height={ROW_PLAY.icon} className="block" style={{ marginLeft: 1 }} />

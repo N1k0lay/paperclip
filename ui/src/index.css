@@ -511,7 +511,7 @@
   --artifact-icon-label-size: 24px;
   --artifact-icon-label-leading: 54px;
   --artifact-grid-min: 330px;
-  --artifact-grid: repeat(auto-fill, minmax(var(--artifact-grid-min), 1fr));
+  --artifact-grid: repeat(auto-fill, minmax(min(100%, var(--artifact-grid-min)), 1fr)); /* one column still fits a 320px phone */
   --artifact-frame-h: 254px;
   --artifact-tile-h: 370px;
   --artifact-tile-radius: 12px;

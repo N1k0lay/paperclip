@@ -44,7 +44,7 @@ export function ArtifactPrint({
   subject: ArtifactSubject;
   /** Sized by the caller (a stack fits it to its own box); on its own it fits the single box. */
   size?: PrintSize;
-  onMediaLoad?: (event: SyntheticEvent<HTMLImageElement>) => void;
+  onMediaLoad?: (event: SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => void;
   style?: CSSProperties;
 }) {
   const [ownAspect, onOwnLoad] = useImageAspect(subject.aspect);
@@ -55,16 +55,31 @@ export function ArtifactPrint({
       className="artifact-print relative shrink-0 overflow-hidden"
       style={{ width: print.width, height: print.height, borderWidth: print.border, ...style }}
     >
-      <img
-        src={subject.thumbnailUrl ?? undefined}
-        alt=""
-        draggable={false}
-        className="absolute inset-0 h-full w-full object-cover"
-        onLoad={(event) => {
-          onOwnLoad(event);
-          onMediaLoad?.(event);
-        }}
-      />
+      {subject.kind === "video" && !subject.thumbnailUrl ? (
+        // No poster: the print shows the video's own first frame, as the shipped video card does.
+        <video
+          src={subject.videoUrl ?? undefined}
+          className="absolute inset-0 h-full w-full object-cover"
+          muted
+          playsInline
+          preload="metadata"
+          onLoadedMetadata={(event) => {
+            onOwnLoad(event);
+            onMediaLoad?.(event);
+          }}
+        />
+      ) : (
+        <img
+          src={subject.thumbnailUrl ?? undefined}
+          alt=""
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover"
+          onLoad={(event) => {
+            onOwnLoad(event);
+            onMediaLoad?.(event);
+          }}
+        />
+      )}
       {subject.kind === "video" ? (
         <span
           aria-hidden

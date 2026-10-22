@@ -66,6 +66,21 @@ describe("the Artifacts page tiles", () => {
     expect(print?.style.height).toBe("163.33px");
   });
 
+  it("plays a video's own stream in the print when it has no poster, never an image tag on the video", () => {
+    act(() =>
+      root.render(
+        <MemoryRouter>
+          <ArtifactTileGrid>
+            <ArtifactSingleTile subject={testSubject({ kind: "video", filename: "reel.webm", videoUrl: "/api/files/reel.webm" })} now={NOW} />
+          </ArtifactTileGrid>
+        </MemoryRouter>,
+      ),
+    );
+    const print = container.querySelector("[data-artifact-print]");
+    expect(print?.querySelector("video")?.getAttribute("src")).toBe("/api/files/reel.webm");
+    expect(print?.querySelector("img")).toBeNull();
+  });
+
   it("renders a single artifact as a button named after its file, with the sheet treatment", () => {
     act(() =>
       root.render(

@@ -41,10 +41,12 @@ export function Artifacts() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const [searchParams, setSearchParams] = useSearchParams();
   const { enabled: v1 } = useArtifactsV1Enabled();
-
   const kind = parseKind(searchParams.get("kind"));
   const query = searchParams.get("q") ?? "";
-  const groupBy = parseGroupBy(searchParams.get("groupBy"));
+  const urlGroupBy = parseGroupBy(searchParams.get("groupBy"));
+  // Artifacts V1 has one row of views: a kind is always a flat view, so a kind in the URL
+  // overrides a grouping there — the view row then says what the page shows.
+  const groupBy: ArtifactGroupBy = v1 && kind !== "all" ? "none" : urlGroupBy;
   const groupIssueId = searchParams.get("groupIssueId") ?? undefined;
 
   const [draftQuery, setDraftQuery] = useState(query);
@@ -126,9 +128,11 @@ export function Artifacts() {
         next.delete("groupIssueId");
         if (value === "task") next.delete("groupBy");
         else next.set("groupBy", value);
+        // Artifacts V1: a grouping is the Tasks view, which carries no kind filter.
+        if (v1 && value !== "none") next.delete("kind");
       });
     },
-    [updateParams],
+    [updateParams, v1],
   );
 
   // Build a relative `To` that preserves the active filters/search while

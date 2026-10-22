@@ -41,15 +41,15 @@ export function subjectFromAttachment(attachment: IssueAttachment): ArtifactSubj
   const filename = attachment.originalFilename ?? attachment.objectKey;
   const ext = extOf({ filename });
   const kind = kindFor(ext, attachment.contentType);
-  const picture = kind === "image" || kind === "video" ? artifactUrl(attachment.contentPath) || null : null;
+  const source = kind === "image" || kind === "video" ? artifactUrl(attachment.contentPath) || null : null;
   return {
     kind,
     title: filename,
     filename,
     ext,
     contentType: attachment.contentType,
-    thumbnailUrl: picture,
-    videoUrl: kind === "video" ? picture : null,
+    thumbnailUrl: kind === "image" ? source : null,
+    videoUrl: kind === "video" ? source : null,
     sizeLabel: sizeLabel(attachment.byteSize),
     updatedAt: iso(attachment.updatedAt),
   };
@@ -70,15 +70,15 @@ export function subjectFromWorkProduct(workProduct: IssueWorkProduct): ArtifactS
     const contentPath = artifactUrl(attachment?.contentPath ?? text(metadata, "contentPath") ?? workProductHref(workProduct));
     const ext = extOf({ filename });
     const kind = kindFor(ext, contentType);
-    const picture = (kind === "image" || kind === "video") && contentPath ? contentPath : null;
+    const source = (kind === "image" || kind === "video") && contentPath ? contentPath : null;
     return {
       kind,
       title: workProduct.title,
       filename,
       ext,
       contentType,
-      thumbnailUrl: picture,
-      videoUrl: kind === "video" ? picture : null,
+      thumbnailUrl: kind === "image" ? source : null,
+      videoUrl: kind === "video" ? source : null,
       sizeLabel: sizeLabel(attachment?.byteSize ?? num(metadata, "byteSize") ?? num(metadata, "size")),
       updatedAt,
     };
@@ -103,15 +103,15 @@ export function subjectFromDocumentSummary(doc: IssueDocumentSummary): ArtifactS
 export function subjectFromAttachmentRef(ref: AttachmentRef): ArtifactSubject {
   const ext = extOf({ filename: ref.name });
   const kind = kindFor(ext, ref.contentType);
-  const picture = kind === "image" || kind === "video" ? artifactUrl(ref.openPath ?? ref.url) || null : null;
+  const source = kind === "image" || kind === "video" ? artifactUrl(ref.openPath ?? ref.url) || null : null;
   return {
     kind,
     title: ref.name,
     filename: ref.name,
     ext,
     contentType: ref.contentType ?? null,
-    thumbnailUrl: picture,
-    videoUrl: kind === "video" ? picture : null,
+    thumbnailUrl: kind === "image" ? source : null,
+    videoUrl: kind === "video" ? source : null,
     sizeLabel: sizeLabel(ref.byteSize ?? null),
   };
 }

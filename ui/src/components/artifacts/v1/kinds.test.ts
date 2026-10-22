@@ -7,6 +7,7 @@ import { testSubject } from "./test-subject";
 describe("treatmentOf", () => {
   it("prints media that has a preview and falls back when it has none", () => {
     expect(treatmentOf(testSubject({ kind: "image", thumbnailUrl: "/cap.png" }))).toBe("media");
+    expect(treatmentOf(testSubject({ kind: "video", videoUrl: "/reel.webm" }))).toBe("media");
     expect(treatmentOf(testSubject({ kind: "video" }))).toBe("media-fallback");
     expect(treatmentOf(testSubject({ kind: "file", ext: "mp3" }))).toBe("media-fallback");
   });
@@ -82,6 +83,6 @@ describe("subjectFromCompanyArtifact", () => {
     const subject = subjectFromCompanyArtifact({ ...base, mediaKind: "image", contentType: "image/png", contentPath: "/api/files/contact-sheet.png" });
     expect(subject).toMatchObject({ kind: "image", thumbnailUrl: "/api/files/contact-sheet.png", filename: "contact-sheet.png" });
     const video = subjectFromCompanyArtifact({ ...base, mediaKind: "video", contentType: "video/webm", contentPath: "/api/files/reel.webm" });
-    expect(video).toMatchObject({ kind: "video", videoUrl: "/api/files/reel.webm", thumbnailUrl: "/api/files/reel.webm" });
+    expect(video).toMatchObject({ kind: "video", videoUrl: "/api/files/reel.webm", thumbnailUrl: null });
   });
 });

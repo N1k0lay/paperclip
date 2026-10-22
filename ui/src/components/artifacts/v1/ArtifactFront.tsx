@@ -17,7 +17,7 @@ export function ArtifactFront({
 }: {
   subject: ArtifactSubject;
   print?: PrintSize;
-  onMediaLoad?: (event: SyntheticEvent<HTMLImageElement>) => void;
+  onMediaLoad?: (event: SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => void;
   style?: CSSProperties;
 }) {
   switch (treatmentOf(subject)) {

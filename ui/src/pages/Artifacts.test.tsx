@@ -503,6 +503,23 @@ describe("Artifacts page — Artifacts V1 (Settings > Experimental)", () => {
     flushSync(() => root.unmount());
   });
 
+  it("never hides an active kind under the Tasks view: a kind in the URL is a flat view, and grouping clears it", async () => {
+    artifactsApiMock.list.mockResolvedValue({ artifacts: [sampleArtifact({ id: "img-1", source: "work_product", mediaKind: "image", contentType: "image/png", contentPath: "/files/hero.png" })], nextCursor: null });
+    const { root } = renderArtifacts(container, ["/artifacts?kind=image&groupBy=task"]);
+    await waitForAssertion(() => {
+      expect(artifactsApiMock.list).toHaveBeenLastCalledWith("company-1", expect.objectContaining({ groupBy: "none", kind: "image" }));
+    });
+    expect(radio("Images")?.getAttribute("aria-checked")).toBe("true");
+    expect(radio("Tasks")?.getAttribute("aria-checked")).toBe("false");
+    artifactsApiMock.list.mockResolvedValue({ artifacts: [], groups: [sampleGroup()], nextCursor: null });
+    flushSync(() => container.querySelector<HTMLButtonElement>('[data-testid="artifact-group-option-task"]')!.click());
+    await waitForAssertion(() => {
+      expect(artifactsApiMock.list).toHaveBeenLastCalledWith("company-1", expect.objectContaining({ groupBy: "task", kind: "all" }));
+    });
+    expect(radio("Tasks")?.getAttribute("aria-checked")).toBe("true");
+    flushSync(() => root.unmount());
+  });
+
   it("renders an open stack as single tiles behind the All stacks row", async () => {
     artifactsApiMock.list.mockResolvedValue({
       artifacts: [sampleArtifact(), sampleArtifact({ id: "artifact-2", title: "Deck", href: "/PAP/issues/PAP-42#deck" })],
