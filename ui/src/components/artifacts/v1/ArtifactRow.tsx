@@ -93,6 +93,8 @@ export interface ArtifactRowProps {
   subject: ArtifactSubject;
   to?: To;
   href?: string;
+  /** With `href`: open in a new tab (a file) rather than in place (an in-app location). */
+  external?: boolean;
   onClick?: () => void;
   /** Whether the row is expanded in place (the control reports it). */
   expanded?: boolean;
@@ -109,10 +111,10 @@ export interface ArtifactRowProps {
  * anchor or a button, as the caller needs); trailing controls stand beside
  * it, so nothing interactive nests.
  */
-export function ArtifactRow({ subject, to, href, onClick, expanded, trailing, className, style, now, testId = "artifact-v1-row" }: ArtifactRowProps) {
+export function ArtifactRow({ subject, to, href, external = false, onClick, expanded, trailing, className, style, now, testId = "artifact-v1-row" }: ArtifactRowProps) {
   const name = subject.filename ?? subject.title;
   const [stem, ext] = splitName(name);
-  const facts = [subject.sizeLabel, panelDateLabel(subject.updatedAt, now)].filter((fact): fact is string => Boolean(fact));
+  const facts = [subject.sizeLabel, subject.updatedAt ? panelDateLabel(subject.updatedAt, now) : null].filter((fact): fact is string => Boolean(fact));
   const content = (
     <>
       {treatmentOf(subject) === "media" ? <Thumbnail subject={subject} /> : <ArtifactRowIcon subject={subject} />}
@@ -138,7 +140,7 @@ export function ArtifactRow({ subject, to, href, onClick, expanded, trailing, cl
       {content}
     </Link>
   ) : href ? (
-    <a href={href} target="_blank" rel="noreferrer" aria-label={label} data-testid={`${testId}-open`} className={CONTROL_CLASS}>
+    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined} aria-label={label} data-testid={`${testId}-open`} className={CONTROL_CLASS}>
       {content}
     </a>
   ) : (

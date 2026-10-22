@@ -74,5 +74,5 @@ export function PanelFileRow({
   if (textTab) {
     return <ArtifactRow subject={subject} onClick={() => openTextAttachment?.(attachmentId!, filename)} trailing={trailing} now={now} />;
   }
-  return <ArtifactRow subject={subject} href={openPath || contentPath} trailing={trailing} now={now} />;
+  return <ArtifactRow subject={subject} href={openPath || contentPath} external trailing={trailing} now={now} />;
 }

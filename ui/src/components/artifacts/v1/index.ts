@@ -7,6 +7,6 @@ export { ArtifactFront } from "./ArtifactFront";
 export { ArtifactStack } from "./ArtifactStack";
 export { ArtifactCaption, ArtifactSingleTile, ArtifactStackTile, ArtifactTile, ArtifactTileGrid, type StackTileProps } from "./ArtifactTile";
 export { PanelFileRow, ROW_ACTION_CLASS } from "./PanelFileRow";
-export { subjectFromAttachment, subjectFromIssueDocument, subjectFromWorkProduct } from "./adapters";
+export { subjectFromAttachment, subjectFromAttachmentRef, subjectFromDocumentSummary, subjectFromIssueDocument, subjectFromWorkProduct } from "./adapters";
 export { ARTIFACTS_V1_VIEWS, ArtifactsV1Filters, artifactsV1View, type ArtifactsV1View } from "./ArtifactsV1Filters";
 export { ArtifactRow, ArtifactRowGroup, ArtifactRowIcon, ARTIFACT_ROW_CLASS, ARTIFACT_ROW_MIN_WIDTH, inlineRowStyle, splitName, type ArtifactRowProps } from "./ArtifactRow";

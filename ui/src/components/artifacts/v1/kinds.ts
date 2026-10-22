@@ -24,8 +24,8 @@ export interface ArtifactSubject {
   /** A versioned task document, as opposed to an attached Markdown file. */
   isTaskDocument?: boolean;
   sizeLabel?: string | null;
-  /** ISO timestamp. */
-  updatedAt: string;
+  /** ISO timestamp; a thread attachment has none of its own. */
+  updatedAt?: string | null;
   taskIdentifier?: string | null;
 }
 

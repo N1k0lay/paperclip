@@ -1,4 +1,5 @@
-import type { IssueAttachment, IssueDocument, IssueWorkProduct } from "@paperclipai/shared";
+import type { IssueAttachment, IssueDocument, IssueDocumentSummary, IssueWorkProduct } from "@paperclipai/shared";
+import type { AttachmentRef } from "@/components/task-chat/task-chat-attachments";
 import { getAttachmentArtifactWorkProductMetadata } from "@paperclipai/shared";
 import { artifactUrl } from "@/lib/artifact-card-data";
 import { documentDisplayTitle, workProductHref } from "@/lib/issue-artifacts";
@@ -83,4 +84,34 @@ export function subjectFromWorkProduct(workProduct: IssueWorkProduct): ArtifactS
     };
   }
   return { kind: "link", title: workProduct.title, updatedAt };
+}
+
+/** A document named in the thread (a summary: no body), as a row. */
+export function subjectFromDocumentSummary(doc: IssueDocumentSummary): ArtifactSubject {
+  return {
+    kind: "document",
+    title: documentDisplayTitle(doc),
+    filename: `${doc.key}.md`,
+    ext: "md",
+    contentType: "text/markdown",
+    isTaskDocument: true,
+    updatedAt: doc.updatedAt ? iso(doc.updatedAt) : null,
+  };
+}
+
+/** A file a message refers to (`[name](/api/attachments/…/content)` or a bound upload); it carries no date of its own. */
+export function subjectFromAttachmentRef(ref: AttachmentRef): ArtifactSubject {
+  const ext = extOf({ filename: ref.name });
+  const kind = kindFor(ext, ref.contentType);
+  const picture = kind === "image" || kind === "video" ? artifactUrl(ref.openPath ?? ref.url) || null : null;
+  return {
+    kind,
+    title: ref.name,
+    filename: ref.name,
+    ext,
+    contentType: ref.contentType ?? null,
+    thumbnailUrl: picture,
+    videoUrl: kind === "video" ? picture : null,
+    sizeLabel: sizeLabel(ref.byteSize ?? null),
+  };
 }
