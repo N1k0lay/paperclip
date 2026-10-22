@@ -39,8 +39,8 @@ describe("ArtifactRow", () => {
 
   it("names the file over its size and date, with the document icon's type label", () => {
     act(() => root.render(<ArtifactRow subject={testSubject({ kind: "pdf", filename: "deck.pdf", sizeLabel: "57.7 KB", updatedAt: "2026-09-27T08:00:00" })} now={NOW} />));
-    const row = container.querySelector('button[data-testid="artifact-v1-row"]');
-    expect(row?.getAttribute("aria-label")).toBe("Open deck.pdf");
+    const row = container.querySelector('[data-testid="artifact-v1-row"]');
+    expect(row?.querySelector('button[data-testid="artifact-v1-row-open"]')?.getAttribute("aria-label")).toBe("Open deck.pdf");
     expect(row?.textContent).toContain("57.7 KB");
     expect(row?.textContent).toContain("Yesterday");
     expect(row?.textContent).toContain("PDF");
@@ -54,9 +54,16 @@ describe("ArtifactRow", () => {
         </MemoryRouter>,
       ),
     );
-    const link = container.querySelector('a[data-testid="artifact-v1-row"]');
+    const link = container.querySelector('a[data-testid="artifact-v1-row-open"]');
     expect(link?.getAttribute("href")).toBe("/artifacts/a1");
     expect(link?.querySelector("img")?.getAttribute("src")).toBe("/sheet.png");
+  });
+
+  it("keeps trailing controls beside the row's own control, never inside it", () => {
+    act(() => root.render(<ArtifactRow subject={testSubject({ kind: "pdf", filename: "deck.pdf" })} trailing={<a href="/download" aria-label="Download deck.pdf">dl</a>} now={NOW} />));
+    const row = container.querySelector('[data-testid="artifact-v1-row"]');
+    expect(row?.querySelector('button[data-testid="artifact-v1-row-open"] a')).toBeNull();
+    expect(row?.querySelector('a[aria-label="Download deck.pdf"]')).not.toBeNull();
   });
 
   it("groups several rows inline at equal widths that wrap past 280px each", () => {

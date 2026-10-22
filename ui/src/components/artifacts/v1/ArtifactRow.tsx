@@ -85,15 +85,18 @@ export function splitName(name: string): [string, string] {
   return match ? [match[1], match[2]] : [name, ""];
 }
 
-export const ARTIFACT_ROW_CLASS =
-  "flex w-full items-center gap-2 rounded-(--artifact-row-radius) bg-(--artifact-row) py-2 pl-2 pr-3 text-left outline-none transition-colors hover:bg-(--artifact-row-hover) focus-visible:ring-2 focus-visible:ring-ring";
+/** The row's fill, radius and padding; the inner control and the trailing controls sit inside it. */
+export const ARTIFACT_ROW_CLASS = "flex w-full items-center gap-2 rounded-(--artifact-row-radius) bg-(--artifact-row) py-2 pl-2 pr-3 transition-colors hover:bg-(--artifact-row-hover)";
+const CONTROL_CLASS = "flex min-w-0 flex-1 items-center gap-2 rounded-(--artifact-row-radius) text-left outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export interface ArtifactRowProps {
   subject: ArtifactSubject;
   to?: To;
   href?: string;
   onClick?: () => void;
-  /** Controls at the row's end (open, download, a menu). */
+  /** Whether the row is expanded in place (the control reports it). */
+  expanded?: boolean;
+  /** Controls beside the name: a status, open, download, a menu. They sit outside the row's own control. */
   trailing?: ReactNode;
   className?: string;
   style?: CSSProperties;
@@ -101,8 +104,12 @@ export interface ArtifactRowProps {
   testId?: string;
 }
 
-/** The row itself: a link, an anchor or a button, as the caller needs. */
-export function ArtifactRow({ subject, to, href, onClick, trailing, className, style, now, testId = "artifact-v1-row" }: ArtifactRowProps) {
+/**
+ * The row: the icon and the name over its facts are one control (a link, an
+ * anchor or a button, as the caller needs); trailing controls stand beside
+ * it, so nothing interactive nests.
+ */
+export function ArtifactRow({ subject, to, href, onClick, expanded, trailing, className, style, now, testId = "artifact-v1-row" }: ArtifactRowProps) {
   const name = subject.filename ?? subject.title;
   const [stem, ext] = splitName(name);
   const facts = [subject.sizeLabel, panelDateLabel(subject.updatedAt, now)].filter((fact): fact is string => Boolean(fact));
@@ -123,28 +130,27 @@ export function ArtifactRow({ subject, to, href, onClick, trailing, className, s
           ))}
         </span>
       </span>
-      {trailing}
     </>
   );
-  const classes = cn(ARTIFACT_ROW_CLASS, className);
-  if (to) {
-    return (
-      <Link to={to} aria-label={`Open ${name}`} data-testid={testId} className={classes} style={style}>
-        {content}
-      </Link>
-    );
-  }
-  if (href) {
-    return (
-      <a href={href} target="_blank" rel="noreferrer" aria-label={`Open ${name}`} data-testid={testId} className={classes} style={style}>
-        {content}
-      </a>
-    );
-  }
-  return (
-    <button type="button" aria-label={`Open ${name}`} onClick={onClick} data-testid={testId} className={classes} style={style}>
+  const label = `Open ${name}`;
+  const control = to ? (
+    <Link to={to} aria-label={label} data-testid={`${testId}-open`} className={CONTROL_CLASS}>
+      {content}
+    </Link>
+  ) : href ? (
+    <a href={href} target="_blank" rel="noreferrer" aria-label={label} data-testid={`${testId}-open`} className={CONTROL_CLASS}>
+      {content}
+    </a>
+  ) : (
+    <button type="button" aria-label={label} aria-expanded={expanded} onClick={onClick} data-testid={`${testId}-open`} className={CONTROL_CLASS}>
       {content}
     </button>
+  );
+  return (
+    <div data-testid={testId} data-artifact-row className={cn(ARTIFACT_ROW_CLASS, className)} style={style}>
+      {control}
+      {trailing ? <span className="flex shrink-0 items-center gap-0.5">{trailing}</span> : null}
+    </div>
   );
 }
 
