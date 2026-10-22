@@ -42,7 +42,7 @@ if [[ "$skip_build" == 0 ]]; then
 fi
 
 inspect_image() {
-  docker image inspect --format '{"id":{{json .Id}},"os":{{json .Os}},"architecture":{{json .Architecture}},"variant":{{json .Variant}},"repoDigests":{{json .RepoDigests}}}' "$1" > "$stage/$2"
+  docker image inspect --format '{"id":{{json .Id}},"os":{{json .Os}},"architecture":{{json .Architecture}},"variant":{{json (index . "Variant")}},"repoDigests":{{json .RepoDigests}}}' "$1" > "$stage/$2"
   node - "$stage/$2" "$platform" "$1" <<'NODE'
 const fs = require("node:fs");
 const [file, expected, reference] = process.argv.slice(2);
