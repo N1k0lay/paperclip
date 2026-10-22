@@ -11,7 +11,6 @@ import type {
 import {
   MARKDOWN_REVIEW_DOCUMENT_MAX_BYTES,
   artifactReviewDocumentKey,
-  getAttachmentArtifactWorkProductMetadata,
   getMarkdownWorkProductAttachmentMetadata,
   isArtifactReviewDocumentKey,
 } from "@paperclipai/shared";
@@ -45,7 +44,7 @@ import {
 import { formatDateTime } from "@/lib/utils";
 import { useLocation } from "@/lib/router";
 import { useArtifactsV1Enabled } from "@/hooks/useArtifactsV1Enabled";
-import { ArtifactRow, PanelFileRow, ROW_ACTION_CLASS, subjectFromAttachment, subjectFromIssueDocument, subjectFromWorkProduct, type ArtifactSubject } from "@/components/artifacts/v1";
+import { ArtifactFileRow, ArtifactRow, ROW_ACTION_CLASS, fileRowSourceFromAttachment, fileRowSourceFromWorkProduct, subjectFromAttachment, subjectFromIssueDocument, subjectFromWorkProduct, workProductStateBadge, type ArtifactSubject } from "@/components/artifacts/v1";
 import { artifactUrl } from "@/lib/artifact-card-data";
 
 interface IssuePropertiesArtifactsTabProps {
@@ -607,33 +606,21 @@ export function IssuePropertiesArtifactsTab({
                   </li>
                 );
               }
-              const badge = workProductStatusBadge(wp.status);
-              const statusBadge = badge ? <span className="text-xs text-muted-foreground">{badge.label}</span> : undefined;
-              const attachment = getAttachmentArtifactWorkProductMetadata(wp);
-              const metadata = wp.metadata;
-              const metadataPath = (key: string) => (typeof metadata?.[key] === "string" ? (metadata[key] as string) : null);
-              const contentPath = artifactUrl(attachment?.contentPath ?? metadataPath("contentPath") ?? workProductHref(wp));
-              if (wp.type === "artifact" && (attachment || contentPath)) {
+              // "Unhealthy" outranks the status, as the shipped cards warn.
+              const statusBadge = workProductStateBadge(wp, workProductStatusBadge(wp.status)?.label ?? null);
+              const file = fileRowSourceFromWorkProduct(wp);
+              if (file) {
                 return (
                   <li key={row.id} className="min-w-0">
-                    <PanelFileRow
-                      subject={subject}
-                      id={wp.id}
-                      attachmentId={attachment?.attachmentId}
-                      filename={subject.filename ?? wp.title}
-                      contentType={subject.contentType ?? ""}
-                      contentPath={contentPath}
-                      openPath={artifactUrl(attachment?.openPath ?? metadataPath("openPath")) || contentPath}
-                      downloadPath={artifactUrl(attachment?.downloadPath ?? metadataPath("downloadPath")) || attachmentDownloadPath({ contentPath })}
-                      statusBadge={statusBadge}
-                    />
+                    <ArtifactFileRow subject={subject} source={file} statusBadge={statusBadge} updatedAtLabel={formatDateTime(wp.updatedAt)} />
                   </li>
                 );
               }
+              // A pull request, a preview, a service: a link that opens in a new tab, as the cards do.
               const href = artifactUrl(workProductHref(wp));
               return (
                 <li key={row.id} className="min-w-0">
-                  <ArtifactRow subject={subject} href={href || undefined} trailing={statusBadge} />
+                  <ArtifactRow subject={subject} href={href || undefined} external trailing={statusBadge} />
                 </li>
               );
             }
@@ -653,19 +640,9 @@ export function IssuePropertiesArtifactsTab({
               );
             }
             const attachment = row.value;
-            const filename = attachment.originalFilename ?? attachment.objectKey;
             return (
               <li key={row.id} className="min-w-0">
-                <PanelFileRow
-                  subject={subjectFromAttachment(attachment)}
-                  id={attachment.id}
-                  attachmentId={attachment.id}
-                  filename={filename}
-                  contentType={attachment.contentType}
-                  contentPath={artifactUrl(attachment.contentPath)}
-                  openPath={artifactUrl(attachmentOpenPath(attachment))}
-                  downloadPath={artifactUrl(attachmentDownloadPath(attachment))}
-                />
+                <ArtifactFileRow subject={subjectFromAttachment(attachment)} source={fileRowSourceFromAttachment(attachment)} updatedAtLabel={formatDateTime(attachment.updatedAt)} />
               </li>
             );
           })}

@@ -46,9 +46,9 @@ import type {
 } from "./task-chat-model";
 import { QuestionForm, QuestionResponseSummary } from "./QuestionForm";
 import { TaskChatComposerTakeoverHeader } from "./TaskChatComposerTakeoverContext";
-import { RichWorkProductCard, stateChipFor } from "./RichWorkProductCard";
+import { RichWorkProductCard } from "./RichWorkProductCard";
 import { useArtifactsV1Enabled } from "@/hooks/useArtifactsV1Enabled";
-import { ArtifactRow, subjectFromAttachment, subjectFromDocumentSummary, subjectFromWorkProduct } from "@/components/artifacts/v1";
+import { ArtifactFileRow, ArtifactRow, fileRowSourceFromAttachment, fileRowSourceFromWorkProduct, subjectFromAttachment, subjectFromDocumentSummary, subjectFromWorkProduct, workProductStateBadge } from "@/components/artifacts/v1";
 
 export interface TaskChatProtocolCardProps {
   item: TaskChatProtocolItem;
@@ -1022,28 +1022,27 @@ function ResourceCard({
 }) {
   const { enabled: artifactsV1 } = useArtifactsV1Enabled();
   if (artifactsV1) {
-    // Artifacts V1 (doc/plans/2026-10-22-artifacts-mvp-v1.md): one full-width row, named after the file, with
-    // the deliverable's state beside it; the destination is the one the card had.
+    // Artifacts V1 (doc/plans/2026-10-22-artifacts-mvp-v1.md): one full-width row named after the file. A
+    // registered file keeps the shipped card's actions (gallery, text tab, open raw, download, CSV preview);
+    // any other deliverable is a link that opens in a new tab with its state — "Unhealthy" first — beside it.
     const href = item.href ?? undefined;
+    const testId = `task-chat-resource-${item.resourceKind}`;
     if (item.resourceKind === "deliverable" && item.workProduct) {
-      const chip = stateChipFor(item.workProduct.type, item.workProduct.status, item.workProduct.reviewState);
-      const external = Boolean(href && /^https?:\/\//.test(href));
-      return (
-        <ArtifactRow
-          subject={subjectFromWorkProduct(item.workProduct)}
-          href={href}
-          external={external}
-          trailing={chip ? <span className="text-xs text-muted-foreground">{chip.label}</span> : undefined}
-          testId={`task-chat-resource-${item.resourceKind}`}
-        />
-      );
+      const workProduct = item.workProduct;
+      const statusBadge = workProductStateBadge(workProduct);
+      const file = fileRowSourceFromWorkProduct(workProduct);
+      if (file) {
+        return <ArtifactFileRow subject={subjectFromWorkProduct(workProduct)} source={file} statusBadge={statusBadge} updatedAtLabel={item.timestamp ?? ""} testId={testId} />;
+      }
+      return <ArtifactRow subject={subjectFromWorkProduct(workProduct)} href={href} external trailing={statusBadge} testId={testId} />;
+    }
+    if (item.resourceKind === "attachment" && item.attachment) {
+      return <ArtifactFileRow subject={subjectFromAttachment(item.attachment)} source={fileRowSourceFromAttachment(item.attachment)} updatedAtLabel={item.timestamp ?? ""} testId={testId} />;
     }
     const subject = item.document
       ? subjectFromDocumentSummary(item.document)
-      : item.attachment
-        ? subjectFromAttachment(item.attachment)
-        : { kind: item.resourceKind === "document" ? ("document" as const) : ("file" as const), title: item.title };
-    return <ArtifactRow subject={subject} href={href} external={item.resourceKind === "attachment"} testId={`task-chat-resource-${item.resourceKind}`} />;
+      : { kind: item.resourceKind === "document" ? ("document" as const) : ("file" as const), title: item.title };
+    return <ArtifactRow subject={subject} href={href} external={item.resourceKind === "attachment"} testId={testId} />;
   }
   if (item.resourceKind === "deliverable" && item.workProduct) {
     return <RichWorkProductCard workProduct={item.workProduct} href={item.href} />;

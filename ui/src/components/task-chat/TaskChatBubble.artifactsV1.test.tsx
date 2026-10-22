@@ -6,6 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { IssueGalleryContext } from "@/context/IssueGalleryContext";
+import { TextAttachmentContext } from "@/context/TextAttachmentContext";
 import { TaskChatBubble } from "./TaskChatBubble";
 
 vi.mock("@/hooks/useArtifactsV1Enabled", () => ({ useArtifactsV1Enabled: () => ({ enabled: true, loaded: true }) }));
@@ -81,6 +82,24 @@ describe("TaskChatBubble with Artifacts V1 on", () => {
     const fileLink = rows[1].querySelector<HTMLAnchorElement>('a[data-testid="artifact-v1-row-open"]');
     expect(fileLink?.getAttribute("href")).toBe("/api/attachments/r1/content?inline=1");
     expect(fileLink?.getAttribute("target")).toBe("_blank");
+  });
+
+  it("keeps a text file's link while a plain click opens it in the text tab", () => {
+    const openText = vi.fn();
+    const notes = attachment({ id: "n1", originalFilename: "notes.md", contentType: "text/markdown", byteSize: 512, contentPath: "/api/attachments/n1/content" });
+    flushSync(() =>
+      root.render(
+        <ThemeProvider>
+          <TextAttachmentContext.Provider value={openText}>
+            <TaskChatBubble item={{ id: "m3", kind: "message", author: "agent", text: "[notes.md](/api/attachments/n1/content)", timestamp: "11:10 AM" }} attachments={[notes]} />
+          </TextAttachmentContext.Provider>
+        </ThemeProvider>,
+      ),
+    );
+    const link = container.querySelector<HTMLAnchorElement>('a[data-testid="artifact-v1-row-open"]')!;
+    expect(link.getAttribute("href")).toBe("/api/attachments/n1/content");
+    flushSync(() => { link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })); });
+    expect(openText).toHaveBeenCalledWith("n1", "notes.md");
   });
 
   it("renders no group when a message has no files", () => {

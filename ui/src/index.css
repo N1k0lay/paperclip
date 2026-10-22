@@ -502,6 +502,7 @@
   --artifact-ink-faint: #d2d2d2; /* 20% ink over the paper, kept opaque so stroked glyphs do not darken where they overlap */
   --artifact-sheet-radius: 12px;
   --artifact-sheet-stroke: rgba(26, 26, 26, 0.1); /* 1px inner stroke on sheets and backings */
+  --artifact-sheet-inset-stroke: inset 0 0 0 1px var(--artifact-sheet-stroke);
   --artifact-print-radius: 6px;
   --artifact-shadow-sheet: drop-shadow(0 3.406px 10px rgba(26, 26, 26, 0.0924));
   --artifact-shadow-print: 0 3.406px 20px rgba(26, 26, 26, 0.0924);
@@ -4783,7 +4784,7 @@ html:has(.design-proposal-theme) [data-canonical-toolbar] .collection-toolbar-ta
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 0 1px var(--artifact-sheet-stroke);
+  box-shadow: var(--artifact-sheet-inset-stroke);
   pointer-events: none;
 }
 .artifact-print {

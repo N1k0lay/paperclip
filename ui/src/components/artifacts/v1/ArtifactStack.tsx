@@ -81,7 +81,7 @@ export function ArtifactStack({ front }: { front: ArtifactSubject }) {
           height: LANDSCAPE_SHEET.height,
           borderRadius: "var(--artifact-sheet-radius)",
           background: "var(--artifact-paper)",
-          boxShadow: "inset 0 0 0 1px var(--artifact-sheet-stroke), var(--artifact-shadow-print)",
+          boxShadow: "var(--artifact-sheet-inset-stroke), var(--artifact-shadow-print)",
           "--artifact-base": `${LANDSCAPE_SHEET.rotate}deg`,
         } as CSSProperties}
       />

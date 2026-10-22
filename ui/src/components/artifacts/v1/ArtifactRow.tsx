@@ -99,6 +99,11 @@ export interface ArtifactRowProps {
   href?: string;
   /** With `href`: open in a new tab (a file) rather than in place (an in-app location). */
   external?: boolean;
+  /**
+   * Without `href`: the control is a button. With `href`: an ordinary click
+   * runs this instead of following the link, while modifier clicks, the
+   * context menu and copying the address keep working.
+   */
   onClick?: () => void;
   /** Whether the row is expanded in place (the control reports it). */
   expanded?: boolean;
@@ -144,7 +149,23 @@ export function ArtifactRow({ subject, to, href, external = false, onClick, expa
       {content}
     </Link>
   ) : href ? (
-    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined} aria-label={label} data-testid={`${testId}-open`} className={CONTROL_CLASS}>
+    <a
+      href={href}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noreferrer" : undefined}
+      aria-label={label}
+      data-testid={`${testId}-open`}
+      className={CONTROL_CLASS}
+      onClick={
+        onClick
+          ? (event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+              event.preventDefault();
+              onClick();
+            }
+          : undefined
+      }
+    >
       {content}
     </a>
   ) : (

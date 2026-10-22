@@ -66,6 +66,34 @@ const pdfWorkProduct = {
   updatedAt: new Date("2026-09-26T10:00:00Z"),
 } as unknown as IssueWorkProduct;
 
+const pullRequest = {
+  ...pdfWorkProduct,
+  id: "wp-pr",
+  type: "pull_request",
+  provider: "github",
+  externalId: "42",
+  title: "Ship rich work-product cards",
+  url: "https://github.com/paperclipai/paperclip/pull/42",
+  status: "merged",
+  metadata: { repo: "paperclipai/paperclip", number: 42, state: "merged" },
+  createdAt: new Date("2026-09-25T10:00:00Z"),
+  updatedAt: new Date("2026-09-25T10:00:00Z"),
+} as unknown as IssueWorkProduct;
+
+const brokenService = {
+  ...pdfWorkProduct,
+  id: "wp-service",
+  type: "runtime_service",
+  provider: "paperclip",
+  title: "Preview server",
+  url: "https://preview.example.test",
+  status: "active",
+  healthStatus: "unhealthy",
+  metadata: null,
+  createdAt: new Date("2026-09-24T10:00:00Z"),
+  updatedAt: new Date("2026-09-24T10:00:00Z"),
+} as unknown as IssueWorkProduct;
+
 const planDocument = {
   id: "doc-plan",
   companyId: "company-1",
@@ -170,6 +198,20 @@ describe("IssuePropertiesArtifactsTab with Artifacts V1 on", () => {
     expect(rows[2].textContent).toContain("For review");
     expect(rows[2].querySelector('a[aria-label="Download acmehats-interface-craft.pdf"]')?.getAttribute("href")).toContain("download=1");
     expect(rows[0].querySelector("img")?.getAttribute("src")).toBe(`/api/attachments/${IMAGE_ID}/content`);
+  });
+
+  it("opens other work products in a new tab and warns about an unhealthy service before anything else", async () => {
+    mockIssuesApi.listWorkProducts.mockResolvedValue([pdfWorkProduct, pullRequest, brokenService]);
+    render();
+    await waitFor(() => {
+      expect(container.querySelectorAll('[data-testid="artifact-v1-row"]')).toHaveLength(5);
+    });
+    const pr = container.querySelector<HTMLAnchorElement>('a[aria-label="Open Ship rich work-product cards"]');
+    expect(pr?.getAttribute("href")).toBe("https://github.com/paperclipai/paperclip/pull/42");
+    expect(pr?.getAttribute("target")).toBe("_blank");
+    const service = container.querySelector('a[aria-label="Open Preview server"]')?.closest('[data-testid="artifact-v1-row"]');
+    expect(service?.textContent).toContain("Unhealthy");
+    expect(service?.textContent).not.toContain("Running");
   });
 
   it("opens a task document the way the panel asks, through onOpenDocument", async () => {

@@ -59,6 +59,21 @@ describe("ArtifactRow", () => {
     expect(link?.querySelector("img")?.getAttribute("src")).toBe("/sheet.png");
   });
 
+  it("keeps an anchor's address while a plain click runs the handler and a modifier click follows the link", () => {
+    const onClick = vi.fn();
+    act(() => root.render(<ArtifactRow subject={testSubject({ kind: "document", filename: "notes.md" })} href="/api/attachments/n/content" external onClick={onClick} now={NOW} />));
+    const link = container.querySelector<HTMLAnchorElement>('a[data-testid="artifact-v1-row-open"]')!;
+    expect(link.getAttribute("href")).toBe("/api/attachments/n/content");
+    const plain = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    act(() => { link.dispatchEvent(plain); });
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(plain.defaultPrevented).toBe(true);
+    const withModifier = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, metaKey: true });
+    act(() => { link.dispatchEvent(withModifier); });
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(withModifier.defaultPrevented).toBe(false);
+  });
+
   it("keeps trailing controls beside the row's own control, never inside it", () => {
     act(() => root.render(<ArtifactRow subject={testSubject({ kind: "pdf", filename: "deck.pdf" })} trailing={<a href="/download" aria-label="Download deck.pdf">dl</a>} now={NOW} />));
     const row = container.querySelector('[data-testid="artifact-v1-row"]');

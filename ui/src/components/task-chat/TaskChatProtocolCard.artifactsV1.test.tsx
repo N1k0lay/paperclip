@@ -2,6 +2,7 @@
 
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IssueWorkProduct } from "@paperclipai/shared";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -62,11 +63,13 @@ describe("TaskChatProtocolCard resources with Artifacts V1 on", () => {
   const render = (item: TaskChatProtocolItem) =>
     flushSync(() =>
       root.render(
-        <MemoryRouter>
-          <ThemeProvider>
-            <TaskChatProtocolCard item={item} />
-          </ThemeProvider>
-        </MemoryRouter>,
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter>
+            <ThemeProvider>
+              <TaskChatProtocolCard item={item} />
+            </ThemeProvider>
+          </MemoryRouter>
+        </QueryClientProvider>,
       ),
     );
 
@@ -77,8 +80,19 @@ describe("TaskChatProtocolCard resources with Artifacts V1 on", () => {
     expect(row?.textContent).toContain("acmehats-interface-craft.pdf");
     expect(row?.textContent).toContain("57.7 KB");
     expect(row?.textContent).toContain("PDF");
-    expect(row?.querySelector<HTMLAnchorElement>('a[data-testid="task-chat-resource-deliverable-open"]')?.getAttribute("href")).toBe(`/api/attachments/${ATTACHMENT_ID}/content?inline=1`);
+    const open = row?.querySelector<HTMLAnchorElement>('a[data-testid="task-chat-resource-deliverable-open"]');
+    expect(open?.getAttribute("href")).toBe(`/api/attachments/${ATTACHMENT_ID}/content?inline=1`);
+    expect(open?.getAttribute("target")).toBe("_blank");
+    expect(row?.querySelector('a[aria-label="Download acmehats-interface-craft.pdf"]')?.getAttribute("href")).toContain("download=1");
     expect(container.querySelector('[data-testid="task-chat-rich-work-product-artifact"]')).toBeNull();
+  });
+
+  it("renders a pull request as a link row that opens in a new tab with its state", () => {
+    const pr = { ...deckPdf, id: "wp-pr", type: "pull_request", provider: "github", title: "Ship rich cards", url: "https://github.com/paperclipai/paperclip/pull/42", status: "merged", metadata: { number: 42 } } as unknown as IssueWorkProduct;
+    render({ id: "resource:deliverable:wp-pr", kind: "protocol", surface: "resource", resourceKind: "deliverable", title: pr.title, subtitle: "pull request · merged", href: pr.url, workProduct: pr });
+    const open = container.querySelector<HTMLAnchorElement>('a[data-testid="task-chat-resource-deliverable-open"]');
+    expect(open?.getAttribute("href")).toBe("https://github.com/paperclipai/paperclip/pull/42");
+    expect(open?.getAttribute("target")).toBe("_blank");
   });
 
   it("renders a task document as a row named after its key that stays in the app", () => {

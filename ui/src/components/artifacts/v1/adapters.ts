@@ -3,6 +3,7 @@ import type { AttachmentRef } from "@/components/task-chat/task-chat-attachments
 import { getAttachmentArtifactWorkProductMetadata } from "@paperclipai/shared";
 import { artifactUrl } from "@/lib/artifact-card-data";
 import { documentDisplayTitle, workProductHref } from "@/lib/issue-artifacts";
+import { attachmentDownloadPath, attachmentOpenPath } from "@/lib/issue-attachments";
 import { extOf, kindFor, type ArtifactSubject } from "./kinds";
 import { sizeLabel } from "./when";
 
@@ -113,5 +114,51 @@ export function subjectFromAttachmentRef(ref: AttachmentRef): ArtifactSubject {
     thumbnailUrl: kind === "image" ? source : null,
     videoUrl: kind === "video" ? source : null,
     sizeLabel: sizeLabel(ref.byteSize ?? null),
+  };
+}
+
+/** What a file row needs to open and offer a file the way the shipped card does. */
+export interface FileRowSource {
+  id: string;
+  attachmentId?: string;
+  filename: string;
+  contentType: string;
+  contentPath: string;
+  openPath: string;
+  downloadPath: string;
+  byteSize: number | null;
+}
+
+/** An attached file's paths. */
+export function fileRowSourceFromAttachment(attachment: IssueAttachment): FileRowSource {
+  const filename = attachment.originalFilename ?? attachment.objectKey;
+  return {
+    id: attachment.id,
+    attachmentId: attachment.id,
+    filename,
+    contentType: attachment.contentType,
+    contentPath: artifactUrl(attachment.contentPath),
+    openPath: artifactUrl(attachmentOpenPath(attachment)),
+    downloadPath: artifactUrl(attachmentDownloadPath(attachment)),
+    byteSize: attachment.byteSize,
+  };
+}
+
+/** A registered file's paths, or null when the work product is not a file (a pull request, a service, …). */
+export function fileRowSourceFromWorkProduct(workProduct: IssueWorkProduct): FileRowSource | null {
+  if (workProduct.type !== "artifact") return null;
+  const attachment = getAttachmentArtifactWorkProductMetadata(workProduct);
+  const metadata = workProduct.metadata;
+  const contentPath = artifactUrl(attachment?.contentPath ?? text(metadata, "contentPath") ?? workProductHref(workProduct));
+  if (!attachment && !contentPath) return null;
+  return {
+    id: workProduct.id,
+    attachmentId: attachment?.attachmentId,
+    filename: attachment?.originalFilename ?? text(metadata, "originalFilename") ?? workProduct.title,
+    contentType: attachment?.contentType ?? text(metadata, "contentType") ?? "",
+    contentPath,
+    openPath: artifactUrl(attachment?.openPath ?? text(metadata, "openPath")) || contentPath,
+    downloadPath: artifactUrl(attachment?.downloadPath ?? text(metadata, "downloadPath")) || attachmentDownloadPath({ contentPath }),
+    byteSize: attachment?.byteSize ?? num(metadata, "byteSize") ?? num(metadata, "size"),
   };
 }

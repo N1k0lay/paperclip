@@ -444,7 +444,8 @@ function TaskChatBubbleContent({
               const picture = isImageAttachment(ref) || isVideoLikeOutput(ref.contentType, ref.name);
               const textTab = Boolean(openText && ref.id && isTextAttachment({ contentType: ref.contentType ?? "", originalFilename: ref.name }));
               if (picture) return <ArtifactRow key={ref.url} subject={subject} onClick={() => openImage(ref.url)} style={inlineRowStyle} />;
-              if (textTab) return <ArtifactRow key={ref.url} subject={subject} onClick={() => openText?.(ref.id!, ref.name)} style={inlineRowStyle} />;
+              // A text file keeps its link (modifier clicks, copying the address) while a plain click opens the text tab.
+              if (textTab) return <ArtifactRow key={ref.url} subject={subject} href={ref.openPath ?? ref.url} external onClick={() => openText?.(ref.id!, ref.name)} style={inlineRowStyle} />;
               return <ArtifactRow key={ref.url} subject={subject} href={ref.openPath ?? ref.url} external style={inlineRowStyle} />;
             })}
           </ArtifactRowGroup>
