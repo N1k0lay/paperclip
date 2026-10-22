@@ -1,6 +1,6 @@
 # Artifacts MVP V1 — shipping the lab's direction into the product
 
-Date: 2026-10-22. Status: in progress — slices 1 and 2 landed on `claude/artifacts-mvp-v1`; slice 3 next.
+Date: 2026-10-22. Status: all four slices on `claude/artifacts-mvp-v1` (draft PR #17228); a browser pass on live data is the remaining check before the PR leaves draft.
 
 ## Role of this document
 
@@ -64,7 +64,7 @@ against the PCLP-Core mocks (node 2129:133457, 2096:87691, 2096:86523, 2205:1382
 - Opened stack: the `← All stacks / ACM-3 Title` row above the single tiles.
 - Page tests updated for both flag states.
 
-### Slice 3 — right panel Artifacts tab (next)
+### Slice 3 — right panel Artifacts tab (done)
 
 What the shipped tab does that the V1 rows must keep (read 2026-10-22,
 `IssuePropertiesArtifactsTab.tsx`):
@@ -96,12 +96,17 @@ the V1 row directly with the same destinations the shipped cards use.
   extension over "size · date" with the panel's date form (Today / Yesterday / 2D ago /
   July 23). Existing actions (open, download, review) move into the row's menu.
 
-### Slice 4 — task thread (after slice 3)
+### Slice 4 — task thread (done)
 
 - Work products and documents between turns render as one full-width row 12px under the
-  "Worked" row. A message's attachments render as the same rows inline under the footer,
-  8px apart at equal widths, wrapping past three (280px minimum). This touches
-  `TaskChatThread.tsx` and `TaskChatBubble.tsx` behind the flag.
+  "Worked" row (`TaskChatProtocolCard.tsx`, `ResourceCard`): a registered file is named after
+  the file with the deliverable's state beside it; a document after its key; the destination
+  is the card's. A message's files render as the same rows inline under the footer, 12px
+  below it, 8px apart at equal widths, wrapping past three (280px minimum), in place of the
+  media grid and file chips (`TaskChatBubble.tsx`): pictures and video open the task's
+  gallery, text opens a text tab when the panel offers one, anything else a new tab.
+- Not carried over: the "Images · N / Files · N" labels and the four-up image grid; the
+  rows name every file instead.
 
 ### Later
 
@@ -111,13 +116,14 @@ the V1 row directly with the same destinations the shipped cards use.
 
 ## Verification per slice
 
-Done so far (slices 1–2): `cd ui && pnpm typecheck` (catalog check and `tsc -b`, clean
-apart from the five pre-existing `PluginOrganizationSwitcher` errors), `pnpm check:token-gates`,
-the Vitest suites for `components/artifacts/v1`, the Artifacts page (both flag states), the
-hook, the experimental settings page, the shared feature catalog and the server instance
-settings. Not yet done: a browser pass of the Artifacts page with the flag on against a
-dev instance with real artifacts; the primitives were measured in the lab, the page wiring
-is covered by tests.
+Done (slices 1–4): `cd ui && pnpm typecheck` (catalog check and `tsc -b`, clean apart from
+the five pre-existing `PluginOrganizationSwitcher` errors), `pnpm check:token-gates`,
+`node scripts/check-maps.mjs`, and the Vitest suites for `components/artifacts/v1`, the
+Artifacts page, the panel's Artifacts tab, the task-chat bubble and protocol card (each in
+both flag states), the hook, the experimental settings page, the shared feature catalog and
+the server instance settings. Not yet done: a browser pass with the flag on against a dev
+instance with real artifacts on all three surfaces; the artwork was measured in the lab and
+the wiring is covered by tests.
 
 - `cd ui && pnpm typecheck` (catalog check and `tsc -b`), `pnpm check:token-gates`,
   `npx vitest run src/components/artifacts/v1` plus the touched pages' tests.
