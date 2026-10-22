@@ -6,4 +6,5 @@ export { IconSheet, PreviewSheet } from "./ArtifactSheet";
 export { ArtifactFront } from "./ArtifactFront";
 export { ArtifactStack } from "./ArtifactStack";
 export { ArtifactCaption, ArtifactSingleTile, ArtifactStackTile, ArtifactTile, ArtifactTileGrid, type StackTileProps } from "./ArtifactTile";
+export { ARTIFACTS_V1_VIEWS, ArtifactsV1Filters, artifactsV1View, type ArtifactsV1View } from "./ArtifactsV1Filters";
 export { ArtifactRow, ArtifactRowGroup, ArtifactRowIcon, ARTIFACT_ROW_CLASS, ARTIFACT_ROW_MIN_WIDTH, inlineRowStyle, splitName, type ArtifactRowProps } from "./ArtifactRow";
