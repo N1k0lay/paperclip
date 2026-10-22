@@ -1,6 +1,6 @@
 # Artifacts MVP V1 — shipping the lab's direction into the product
 
-Date: 2026-10-22. Status: in progress (slice 1).
+Date: 2026-10-22. Status: in progress — slices 1 and 2 landed on `claude/artifacts-mvp-v1`; slice 3 next.
 
 ## Role of this document
 
@@ -39,7 +39,7 @@ against the PCLP-Core mocks (node 2129:133457, 2096:87691, 2096:86523, 2205:1382
 
 ## Slices
 
-### Slice 1 — foundation (this PR)
+### Slice 1 — foundation (done)
 
 - Experimental setting `enableArtifactsV1` end to end, with `useArtifactsV1Enabled()`.
 - `--artifact-*` tokens in `index.css` (paper, ink, faint ink, sheet and print radii, sheet
@@ -54,7 +54,7 @@ against the PCLP-Core mocks (node 2129:133457, 2096:87691, 2096:86523, 2205:1382
 - Nothing mounted yet. Storybook stories under `documents-artifacts/` show the primitives on
   fixtures so reviewers can see them without the flag.
 
-### Slice 2 — Artifacts page
+### Slice 2 — Artifacts page (done)
 
 - With the flag on, `Artifacts.tsx` renders the V1 tiles: stacks when grouped by task
   (the default), single tiles otherwise, 28px gaps, 370px cells, hover fill with the
@@ -64,14 +64,39 @@ against the PCLP-Core mocks (node 2129:133457, 2096:87691, 2096:86523, 2205:1382
 - Opened stack: the `← All stacks / ACM-3 Title` row above the single tiles.
 - Page tests updated for both flag states.
 
-### Slice 3 — right panel Artifacts tab
+### Slice 3 — right panel Artifacts tab (next)
+
+What the shipped tab does that the V1 rows must keep (read 2026-10-22,
+`IssuePropertiesArtifactsTab.tsx`):
+
+- Three sources merged: work products (`useIssueWorkProducts`), task documents
+  (`useIssueDocuments`, minus `artifact-review-*` proxies) and attachments not
+  already promoted to work products (`selectArtifactAttachments`).
+- Rows are grouped by run with an agent-name header and a time; V1 flattens to
+  one list, newest first (the lab's decision), and drops the headers.
+- A Markdown work product expands in place into the document review surface
+  (`MarkdownWorkProductRow`, backed by the `artifact-review-<id>` document) with
+  raw open and download as secondary actions; a task document expands in place
+  (`DocumentRow`) or opens in its own pane tab when `onOpenDocument` is given;
+  a text attachment opens in a text tab (`openTextAttachment`), other files in a
+  new tab; `documentDeepLink` expands or opens the requested document; the
+  upload area (`ArtifactUploadContent`) wraps the list.
+- Work products carry a status badge (`workProductStatusBadge`: in progress,
+  for review, done, changes requested, failed).
+
+Approach: the V1 row is the *face* of each item. Give `DocumentRow` and
+`MarkdownWorkProductRow` a `face` render prop so, with the flag on, their
+header is the V1 row (name over size · date, status badge and the open /
+download controls in the row's trailing slot) while their expansion, deep-link
+and review behaviour stay untouched; attachments and other work products render
+the V1 row directly with the same destinations the shipped cards use.
 
 - `IssuePropertiesArtifactsTab` renders the V1 row list when the flag is on: newest first,
   12px apart, 40px document icon or thumbnail with a play disc, name truncating before its
   extension over "size · date" with the panel's date form (Today / Yesterday / 2D ago /
   July 23). Existing actions (open, download, review) move into the row's menu.
 
-### Slice 4 — task thread
+### Slice 4 — task thread (after slice 3)
 
 - Work products and documents between turns render as one full-width row 12px under the
   "Worked" row. A message's attachments render as the same rows inline under the footer,
@@ -85,6 +110,14 @@ against the PCLP-Core mocks (node 2129:133457, 2096:87691, 2096:86523, 2205:1382
   adopted.
 
 ## Verification per slice
+
+Done so far (slices 1–2): `cd ui && pnpm typecheck` (catalog check and `tsc -b`, clean
+apart from the five pre-existing `PluginOrganizationSwitcher` errors), `pnpm check:token-gates`,
+the Vitest suites for `components/artifacts/v1`, the Artifacts page (both flag states), the
+hook, the experimental settings page, the shared feature catalog and the server instance
+settings. Not yet done: a browser pass of the Artifacts page with the flag on against a
+dev instance with real artifacts; the primitives were measured in the lab, the page wiring
+is covered by tests.
 
 - `cd ui && pnpm typecheck` (catalog check and `tsc -b`), `pnpm check:token-gates`,
   `npx vitest run src/components/artifacts/v1` plus the touched pages' tests.
