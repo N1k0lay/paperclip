@@ -17,7 +17,7 @@ function fixture() {
   writeFileSync(path.join(root, "docker/Dockerfile.skaz"), "FROM scratch\n");
   writeFileSync(path.join(root, "docker/compose.skaz.yml"), "services: {}\n");
   writeFileSync(path.join(root, "docker/compose.skaz.postgres.yml"), "services: {}\n");
-  writeFileSync(path.join(root, "docker/skaz.env.example"), "BETTER_AUTH_SECRET=\n");
+  writeFileSync(path.join(root, "docker/skaz.env.example"), "SKAZ_IMAGE=skaz:local\nBETTER_AUTH_SECRET=\n");
   writeFileSync(path.join(root, "docs/deploy/skaz-docker.ru.md"), "# Установка Сказа\n");
   writeFileSync(path.join(root, "skaz.env"), "SECRET=must-never-be-packaged\n");
   writeFileSync(path.join(root, ".env"), "SECRET=must-never-be-packaged\n");
@@ -92,6 +92,21 @@ test("skip-build still inspects platform and labels checkout metadata as packagi
     const manifest = JSON.parse(readFileSync(path.join(f.output, "manifest.json")));
     assert.equal(manifest.buildSkipped, true);
     assert.match(manifest.sourceNote, /not.*image|не.*образ/i);
+  } finally { f.cleanup(); }
+});
+
+test("custom SKAZ_IMAGE is selected by the exported environment template", () => {
+  const f = fixture();
+  try {
+    const image = "registry.corp:5000/skaz:2026-10-23";
+    const result = f.run({ SKAZ_IMAGE: image });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(f.calls().at(-1), ["save", image]);
+    const template = readFileSync(path.join(f.output, "skaz.env.example"), "utf8");
+    assert.equal(template, `SKAZ_IMAGE=${image}\nBETTER_AUTH_SECRET=\n`);
+    const digest = createHash("sha256").update(template).digest("hex");
+    assert.ok(readFileSync(path.join(f.output, "SHA256SUMS"), "utf8").includes(`${digest}  skaz.env.example`));
+    assert.equal(readFileSync(path.join(f.root, "docker/skaz.env.example"), "utf8"), "SKAZ_IMAGE=skaz:local\nBETTER_AUTH_SECRET=\n");
   } finally { f.cleanup(); }
 });
 

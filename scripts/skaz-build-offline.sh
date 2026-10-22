@@ -69,6 +69,8 @@ node - "$stage" "$platform" "$git_base" "$dirty" "$skip_build" "${images[@]}" <<
 const fs = require("node:fs");
 const path = require("node:path");
 const [directory, platform, gitBaseCommit, dirty, buildSkipped, ...references] = process.argv.slice(2);
+const envFile = path.join(directory, "skaz.env.example");
+fs.writeFileSync(envFile, fs.readFileSync(envFile, "utf8").replace(/^SKAZ_IMAGE=.*$/m, () => `SKAZ_IMAGE=${references[0]}`));
 const images = references.map((reference, index) => {
   const file = path.join(directory, index === 0 ? ".app-image.json" : ".postgres-image.json");
   const { id, os, architecture, variant, repoDigests } = JSON.parse(fs.readFileSync(file, "utf8"));

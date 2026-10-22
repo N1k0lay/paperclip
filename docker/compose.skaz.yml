@@ -35,6 +35,15 @@ services:
       DO_NOT_TRACK: "1"
       PAPERCLIP_ANNOUNCEMENTS_ENABLED: "false"
       AWS_EC2_METADATA_DISABLED: "true"
+      # Docker client proxy defaults must not intercept the corporate API.
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      ALL_PROXY: ""
+      http_proxy: ""
+      https_proxy: ""
+      all_proxy: ""
+      NO_PROXY: "*"
+      no_proxy: "*"
     ports:
       - "${SKAZ_BIND_IP:-127.0.0.1}:${SKAZ_PORT:-3100}:3100"
     volumes:
