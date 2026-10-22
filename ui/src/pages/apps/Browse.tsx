@@ -524,6 +524,7 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
   const gallery = (
     (galleryQuery.data?.apps ?? []) as AppGalleryDisplayEntry[]
   ).filter((entry) => {
+    if (entry.aiConnectionRouter || entry.methods?.every(method => method.purpose === "ai")) return false;
     if (!memoryConnectorsEnabled && isMemoryConnectorId(appDefinitionSlug(entry))) return false;
     if (!connectorAvailability.enabled(entry)) return false;
     const definition = getAppStoreDefinition(appDefinitionSlug(entry));
@@ -543,7 +544,7 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
     const activeConnections = (connectionsQuery.data?.connections ?? []).filter(
       (connection) =>
         connection.status !== "archived" &&
-        connection.connectionPurpose !== "channel",
+        connection.connectionPurpose !== "channel" && connection.connectionPurpose !== "ai",
     );
     const activeApplications = (
       applicationsQuery.data?.applications ?? []
@@ -551,7 +552,8 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
       (application) =>
         application.status !== "archived" &&
         application.type !== "chat" &&
-        application.metadata?.purpose !== "channel",
+        application.metadata?.purpose !== "channel" && application.metadata?.purpose !== "ai"
+        && !getAppStoreDefinition(appApplicationSourceSlug(application) ?? "")?.methods.every(method => method.purpose === "ai"),
     );
     const connectionsByApplicationId = new Map<string, ToolConnection[]>();
     for (const connection of activeConnections) {
@@ -1108,9 +1110,6 @@ export function ConnectorCard({
     chatProviderVisible(row.slug, chatConnectorsEnabled, githubReviewBotsEnabled),
     preselectedAgentId,
   );
-  const copilotMethod = row.slug === "github"
-    ? getAppStoreDefinition(row.slug)?.methods.find(method => method.purpose === "ai" && method.ai?.provider === "github")
-    : undefined;
   const upstreamAccounts = (row.upstreamApps ?? []).flatMap(snapshot => {
     const connection = connectionById?.get(snapshot.connectionId);
     return connection ? snapshot.accounts.map((account, index) => ({ connection, account, snapshot,
@@ -1164,14 +1163,6 @@ export function ConnectorCard({
             {row.aggregatorApp && row.upstreamApps?.some(app => app.accounts.length > 0) ? `Accounts managed in ${[...new Set(row.upstreamApps?.map(app => AGGREGATOR_NAMES[app.provider ?? "composio"]))].join(" and ")}.` : row.description}
           </p>
         </div>
-        {copilotMethod && <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => onNavigate(`/apps/connect?source=github&method=${encodeURIComponent(copilotMethod.key)}`)}
-        >
-          Connect Copilot
-        </Button>}
         {setupEnabled && <Button
           type="button"
           size="sm"

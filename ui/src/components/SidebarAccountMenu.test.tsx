@@ -7,6 +7,8 @@ import { queryKeys } from "../lib/queryKeys";
 import { SidebarAccountMenu } from "./SidebarAccountMenu";
 import { SidebarAccountMenu as ProductionSidebarAccountMenu } from "./SidebarAccountMenu.production";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { i18n } from "@/i18n";
+import { initialLocale } from "@/i18n/locales";
 
 const mockAuthApi = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -153,6 +155,35 @@ describe("SidebarAccountMenu", () => {
     document.body.innerHTML = "";
     vi.clearAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("renders the Russian menu and saves a language selected from the menu", async () => {
+    const root = createRoot(container);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    try {
+      await i18n.changeLanguage("ru");
+      await act(() => {
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider><SidebarAccountMenu open /></TooltipProvider>
+          </QueryClientProvider>,
+        );
+      });
+      await flushReact();
+      expect(container.querySelector('button[aria-label="Открыть меню пользователя"]')).not.toBeNull();
+      expect(document.body.textContent).toContain("Настройки");
+      const englishButton = Array.from(document.body.querySelectorAll("button"))
+        .find((button) => button.textContent === "English");
+      expect(englishButton).toBeDefined();
+      await act(() => { englishButton?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+      expect(initialLocale()).toBe("en");
+      expect(document.documentElement.lang).toBe("en");
+      expect(document.body.textContent).toContain("Settings");
+    } finally {
+      await act(() => root.unmount());
+      await i18n.changeLanguage("en");
+      queryClient.clear();
+    }
   });
 
   describe.each([SidebarAccountMenu, ProductionSidebarAccountMenu])("staging commit (%#)", (AccountMenu) => {

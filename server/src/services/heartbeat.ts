@@ -250,6 +250,7 @@ import {
   settleConversationTurn,
 } from "./agent-conversations.js";
 import { withAdapterExecutionPhase } from "@paperclipai/adapter-utils/execution-phase";
+import { resolvePiLocalProvider } from "@paperclipai/adapter-pi-local/server";
 import {
   recordNativeLocalProcessStop,
 } from "./native-local-process-stop.js";
@@ -1942,6 +1943,26 @@ export function heartbeatService(
         const failedRun = await getRun(runId);
         if (failedRun) await releaseIssueExecutionAndPromote(failedRun);
         return;
+      }
+
+      // Historical account/router bindings must fail before any credential
+      // resolution, including recovery of a previously admitted run.
+      const savedProviderContext = parseObject(run.contextSnapshot);
+      let localProviderConfigured = agent.adapterType === "pi_local"
+        && run.runtimeMode === "legacy"
+        && !agent.runtimeConfig?.aiConnection
+        && !savedProviderContext.aiConnection
+        && !savedProviderContext.aiRouterSelection
+        && Object.keys(parseObject(parseObject(run.runnerProfileJson).nativeExecutionInput)).length === 0;
+      if (localProviderConfigured) {
+        try { localProviderConfigured = Boolean(resolvePiLocalProvider(parseObject(agent.adapterConfig))); }
+        catch { localProviderConfigured = false; }
+      }
+      if (!localProviderConfigured) {
+        throw new ConfigurationIncompleteFailure(
+          "Для запуска в Сказе укажите URL локального или корпоративного API и модель в настройках агента. Привязки к внешним аккаунтам отключены.",
+          { configurationIncomplete: { reason: "local_provider_required", actionUrl: `/agents/${agent.id}/runtime` } },
+        );
       }
 
       // The claimed adapter identity is immutable recovery evidence. Do not

@@ -58,7 +58,7 @@ import { shellQuote } from "@paperclipai/adapter-utils/ssh";
 import { isPiUnknownSessionError, parsePiJsonl, createPiJsonlParser } from "./parse.js";
 import { createPiStdoutCompactor, resolvePiStdoutLogMode } from "./stdout-compaction.js";
 import { ensurePiModelConfiguredAndAvailable } from "./models.js";
-import { preparePiRuntimeConfig } from "./runtime-config.js";
+import { preparePiRuntimeConfig, resolvePiLocalProvider } from "./runtime-config.js";
 import { preparePiOpenRouterExtension } from "./openrouter-extension.js";
 import { SANDBOX_INSTALL_COMMAND } from "../index.js";
 
@@ -241,7 +241,9 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   );
   const hasCustomPromptTemplate = asString(config.promptTemplate, "").trim().length > 0;
   const command = asString(config.command, "pi");
-  const model = asString(config.model, "").trim();
+  const localProvider = resolvePiLocalProvider(config);
+  if (!localProvider) throw new Error("Укажите URL локального или корпоративного OpenAI-совместимого API.");
+  const model = localProvider ? `local/${localProvider.modelId}` : asString(config.model, "").trim();
   const thinking = asString(config.thinking, "").trim();
   const stdoutLogMode = resolvePiStdoutLogMode(config);
 
@@ -337,11 +339,9 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   // Materialize custom Pi providers (PAPERCLIP_PI_PROVIDERS) into a managed
   // PI_CODING_AGENT_DIR before runtimeEnv is computed, so both local validation
   // and the spawned Pi process resolve models against the managed models.json.
-  const preparedRuntimeConfig = await preparePiRuntimeConfig({ env });
+  const preparedRuntimeConfig = await preparePiRuntimeConfig({ env, config });
+  Object.assign(env, preparedRuntimeConfig.env);
   const localAgentConfigDir = preparedRuntimeConfig.agentConfigDir ?? "";
-  if (localAgentConfigDir) {
-    env.PI_CODING_AGENT_DIR = localAgentConfigDir;
-  }
   let attributionExtension: Awaited<ReturnType<typeof preparePiOpenRouterExtension>> | undefined;
   try {
     attributionExtension = await preparePiOpenRouterExtension();
@@ -401,7 +401,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       resolvedCommand,
     });
 
-    if (!executionTargetIsRemote) {
+    if (!executionTargetIsRemote && !localProvider) {
       await ensurePiModelConfiguredAndAvailable({
         model,
         command,

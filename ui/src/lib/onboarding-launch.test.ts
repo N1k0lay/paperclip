@@ -99,9 +99,14 @@ describe("onboarding launch payloads", () => {
     ).toBeNull();
   });
 
+  it("reuses the Russian startup project without duplicating it", () => {
+    const project = { id: "local", name: "Начало работы", status: "in_progress" as const };
+    expect(selectReusableOnboardingProject([project])).toBe(project);
+  });
+
   it("links the onboarding project and first issue to the selected goal", () => {
     expect(buildOnboardingProjectPayload("goal-1")).toEqual({
-      name: "Onboarding",
+      name: "Начало работы",
       status: "in_progress",
       goalIds: ["goal-1"],
     });
@@ -136,7 +141,7 @@ describe("onboarding launch payloads", () => {
 
   it("omits goal links when no default company goal exists", () => {
     expect(buildOnboardingProjectPayload(null)).toEqual({
-      name: "Onboarding",
+      name: "Начало работы",
       status: "in_progress",
     });
 

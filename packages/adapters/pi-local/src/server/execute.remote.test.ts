@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -102,6 +102,7 @@ vi.mock("./models.js", async () => {
 });
 
 import { execute } from "./execute.js";
+import { ensurePiModelConfiguredAndAvailable } from "./models.js";
 
 describe("pi remote execution", () => {
   const cleanupDirs: string[] = [];
@@ -113,6 +114,50 @@ describe("pi remote execution", () => {
       if (!dir) continue;
       await rm(dir, { recursive: true, force: true }).catch(() => undefined);
     }
+  });
+
+  it("requires an endpoint before starting any provider work", async () => {
+    await expect(execute({
+      runId: "missing-endpoint",
+      agent: { id: "agent-1", companyId: "company-1", name: "Pi", adapterType: "pi_local", adapterConfig: {} },
+      runtime: { sessionId: null, sessionParams: null, sessionDisplayId: null, taskKey: null },
+      config: { model: "openai/cloud-model" }, context: {}, onLog: async () => {},
+    })).rejects.toThrow(/URL/);
+    expect(runChildProcess).not.toHaveBeenCalled();
+  });
+
+  it("runs an explicit OpenAI-compatible model without discovering vendors and removes its managed config", async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), "paperclip-pi-local-endpoint-"));
+    cleanupDirs.push(rootDir);
+    const apiKey = "!literal-key-never-a-shell-command";
+    let configDir = "";
+    runChildProcess.mockImplementationOnce(async (...args: unknown[]) => {
+      const options = args[3] as { env: Record<string, string> };
+      const cliArgs = args[2] as string[];
+      configDir = options.env.PI_CODING_AGENT_DIR;
+      expect(options.env.PAPERCLIP_PI_LOCAL_API_KEY).toBe(apiKey);
+      expect(options.env.PI_OFFLINE).toBe("1");
+      const registry = await readFile(path.join(configDir, "models.json"), "utf8");
+      expect(JSON.parse(registry).providers.local).toMatchObject({ baseUrl: "http://127.0.0.1:8080/v1", models: [{ id: "org/qwen" }] });
+      expect(registry).not.toContain(apiKey);
+      expect(cliArgs).toEqual(expect.arrayContaining(["--provider", "local", "--model", "org/qwen"]));
+      return {
+        exitCode: 0, signal: null, timedOut: false, stdout: JSON.stringify({ type: "turn_end", message: { role: "assistant", content: "done" } }),
+        stderr: "", pid: 123, startedAt: new Date().toISOString(),
+      };
+    });
+    const metadata: unknown[] = [];
+    const result = await execute({
+      runId: "run-local-endpoint",
+      agent: { id: "agent-1", companyId: "company-1", name: "Pi Builder", adapterType: "pi_local", adapterConfig: {} },
+      runtime: { sessionId: null, sessionParams: null, sessionDisplayId: null, taskKey: null },
+      config: { command: "pi", baseUrl: "http://127.0.0.1:8080/v1", model: "org/qwen", cwd: rootDir, env: { OPENAI_API_KEY: apiKey } },
+      context: {}, onLog: async () => {}, onMeta: async (value) => { metadata.push(value); },
+    });
+    expect(result.model).toBe("local/org/qwen");
+    expect(ensurePiModelConfiguredAndAvailable).not.toHaveBeenCalled();
+    expect(JSON.stringify(metadata)).not.toContain(apiKey);
+    await expect(access(configDir)).rejects.toThrow();
   });
 
   it("prepares the workspace, syncs Pi skills, and restores workspace changes for remote SSH execution", async () => {
@@ -141,7 +186,7 @@ describe("pi remote execution", () => {
       },
       config: {
         command: "pi",
-        model: "openai/gpt-5.4-mini",
+        baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen",
       },
       context: {
         paperclipWorkspace: {
@@ -190,7 +235,7 @@ describe("pi remote execution", () => {
     });
     expect(String(result.sessionId)).toContain(`${managedRemoteWorkspace}/.paperclip-runtime/pi/sessions/`);
     expect(prepareWorkspaceForSshExecution).toHaveBeenCalledTimes(1);
-    expect(syncDirectoryToSsh).toHaveBeenCalledTimes(2);
+    expect(syncDirectoryToSsh).toHaveBeenCalledTimes(3);
     expect(syncDirectoryToSsh).toHaveBeenCalledWith(expect.objectContaining({
       remoteDir: `${managedRemoteWorkspace}/.paperclip-runtime/pi/skills`,
       followSymlinks: true,
@@ -262,7 +307,7 @@ describe("pi remote execution", () => {
       },
       config: {
         command: "pi",
-        model: "tensorix/deepseek/deepseek-chat-v3.1",
+        baseUrl: "http://127.0.0.1:8080/v1", model: "local/deepseek/deepseek-chat-v3.1",
         env: {
           PAPERCLIP_PI_PROVIDERS: JSON.stringify(providers),
           ANTHROPIC_API_KEY: "sk-bf-REALVK",
@@ -299,7 +344,7 @@ describe("pi remote execution", () => {
       `${managedRemoteWorkspace}/.paperclip-runtime/pi/agentConfig`,
     );
     expect(call?.[2]).toContain("--provider");
-    expect(call?.[2]).toContain("tensorix");
+    expect(call?.[2]).toContain("local");
     expect(call?.[2]).toContain("--model");
     expect(call?.[2]).toContain("deepseek/deepseek-chat-v3.1");
   });
@@ -354,7 +399,7 @@ describe("pi remote execution", () => {
       },
       config: {
         command: "pi",
-        model: "openai/gpt-5.4-mini",
+        baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen",
       },
       context: {
         paperclipWorkspace: {
@@ -431,7 +476,7 @@ describe("pi remote execution", () => {
       },
       config: {
         command: "pi",
-        model: "openai/gpt-5.4-mini",
+        baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen",
       },
       context: {
         paperclipWorkspace: {
@@ -502,7 +547,7 @@ describe("pi remote execution", () => {
         sessionDisplayId: "session-123",
         taskKey: null,
       },
-      config: { command: "pi", model: "openai/gpt-5.4-mini" },
+      config: { command: "pi", baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen" },
       context: {
         paperclipWorkspace: { cwd: workspaceDir, source: "project_primary" },
       },
@@ -571,7 +616,7 @@ describe("pi remote execution", () => {
         sessionDisplayId: "session-123",
         taskKey: null,
       },
-      config: { command: "pi", model: "openai/gpt-5.4-mini", bootstrapPromptTemplate: "BOOTSTRAP {{run.id}}" },
+      config: { command: "pi", baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen", bootstrapPromptTemplate: "BOOTSTRAP {{run.id}}" },
       context: {
         ...createPromptContextFixture(),
         paperclipWorkspace: { cwd: workspaceDir, source: "project_primary" },
@@ -619,7 +664,7 @@ describe("pi remote execution", () => {
         adapterConfig: {},
       },
       runtime: { sessionId: null, sessionParams: null, sessionDisplayId: null, taskKey: null },
-      config: { command: "pi", model: "openai/gpt-5.4-mini", cwd: rootDir },
+      config: { command: "pi", baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen", cwd: rootDir },
       context: { ...fixture, paperclipWorkspace: { cwd: rootDir, source: "project_primary" } },
       onLog: async () => {},
     } as never);
@@ -653,7 +698,7 @@ describe("pi remote execution", () => {
         adapterConfig: {},
       },
       runtime: { sessionId: null, sessionParams: null, sessionDisplayId: null, taskKey: null },
-      config: { command: "pi", model: "openai/gpt-5.4-mini", cwd: rootDir },
+      config: { command: "pi", baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen", cwd: rootDir },
       context: {},
       onLog: async () => {},
     } as never);
@@ -682,7 +727,7 @@ describe("pi remote execution", () => {
       runtime: { sessionId: null, sessionParams: null, sessionDisplayId: null, taskKey: null },
       config: {
         command: "pi",
-        model: "openai/gpt-5.4-mini",
+        baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen",
         cwd: rootDir,
         promptTemplate: "CUSTOM POLICY {{run.id}}",
       },
@@ -719,7 +764,7 @@ describe("pi remote execution", () => {
         sessionDisplayId: "session-resumed-policy",
         taskKey: null,
       },
-      config: { command: "pi", model: "openai/gpt-5.4-mini", cwd: rootDir },
+      config: { command: "pi", baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen", cwd: rootDir },
       context: createPromptContextFixture(),
       onLog: async () => {},
     } as never);
@@ -759,7 +804,7 @@ describe("pi remote execution", () => {
       },
       config: {
         command: "pi",
-        model: "openai/gpt-5.4-mini",
+        baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen",
         cwd: rootDir,
         instructionsFilePath: "AGENTS.md",
         promptTemplate: "CUSTOM POLICY {{run.id}}",
@@ -854,7 +899,7 @@ describe("pi remote execution", () => {
       },
       config: {
         command: "pi",
-        model: "openai/gpt-5.4-mini",
+        baseUrl: "http://127.0.0.1:8080/v1", model: "local/qwen",
         stdoutLogMode: "compact",
       },
       context: {

@@ -3,9 +3,15 @@ import {
   findPaperclipConfigKeyWarnings,
   mergePaperclipConfig,
   paperclipConfigSchema,
+  telemetryConfigSchema,
 } from "./config-schema.js";
 
 describe("paperclip config schema", () => {
+  it("requires an explicit telemetry opt-in", () => {
+    expect(telemetryConfigSchema.parse({}).enabled).toBe(false);
+    expect(telemetryConfigSchema.parse(undefined).enabled).toBe(false);
+    expect(telemetryConfigSchema.parse({ enabled: true }).enabled).toBe(true);
+  });
   it("defaults omitted runtime paths to legacy instance-root locations", () => {
     const parsed = paperclipConfigSchema.parse({
       $meta: {
@@ -22,6 +28,7 @@ describe("paperclip config schema", () => {
       server: {},
     });
 
+    expect(parsed.telemetry.enabled).toBe(false);
     expect(parsed.database.embeddedPostgresDataDir).toBe("~/.paperclip/instances/default/db");
     expect(parsed.database.backup.dir).toBe("~/.paperclip/instances/default/data/backups");
     expect(parsed.logging.logDir).toBe("~/.paperclip/instances/default/logs");

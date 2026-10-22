@@ -143,6 +143,18 @@ export function aiConnectionRoutes(db: Db, options: Parameters<typeof supportsLo
     if (!supportsLocalAiLogin(options)) throw unprocessable("Server-host subscription sign-in is unavailable on this hosted instance. Choose a supported sign-in environment or use an API key.");
   }
   const router = Router();
+  router.use("/companies/:companyId/ai-connections", (req, _res, next) => {
+    assertBoard(req);
+    assertCompanyAccess(req, req.params.companyId as string);
+    if ((req.method !== "GET" && req.method !== "DELETE") || req.path.endsWith("/usage")) throw forbidden("Внешние провайдеры отключены. Укажите URL локального или корпоративного API в настройках агента.");
+    next();
+  });
+  router.use("/companies/:companyId/ai-connection-pools", (req, _res, next) => {
+    assertBoard(req);
+    assertCompanyAccess(req, req.params.companyId as string);
+    if (req.method !== "GET" && req.method !== "DELETE") throw forbidden("Маршрутизация через внешних провайдеров отключена.");
+    next();
+  });
   const service = aiConnectionService(db);
   const localLogin = localAiLoginService(db);
   const pools = aiConnectionRouterService(db);

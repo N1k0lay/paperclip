@@ -5,6 +5,7 @@ export function buildPiLocalConfig(v: CreateConfigValues): Record<string, unknow
   if (v.cwd) ac.cwd = v.cwd;
   if (v.instructionsFilePath) ac.instructionsFilePath = v.instructionsFilePath;
   if (v.model) ac.model = v.model;
+  if (v.adapterSchemaValues?.baseUrl) ac.baseUrl = v.adapterSchemaValues.baseUrl;
   const nativeSelected = v.runner === "paperclip"
     || ((v.runner === undefined || v.runner === "auto") && v.resolvedRunner === "paperclip");
   if (nativeSelected) {

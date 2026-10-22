@@ -1394,7 +1394,7 @@ describe("AppDetail", () => {
     expect(pushToastMock).toHaveBeenCalledWith(expect.objectContaining({ title: "Reconnected" }));
   });
 
-  it.each(["permissions", "review"])("offers a supported replacement for an obsolete Anthropic connection on %s", async (tab) => {
+  it.each(["permissions", "review"])("blocks a hosted model account bookmarked on %s", async (tab) => {
     mockParams.tab = tab;
     listApplicationsMock.mockResolvedValue({ applications: [] });
     listGalleryMock.mockResolvedValue({ apps: [getAppStoreDefinition("anthropic")!] });
@@ -1412,10 +1412,8 @@ describe("AppDetail", () => {
     expect(container.querySelector('input[type="password"]')).toBeNull();
     expect(findButton("Check & reconnect")).toBeUndefined();
     expect(findButton("Reconnect")).toBeUndefined();
-    expect(container.textContent).toContain("Connection no longer supported");
-    expect(container.textContent).toContain("then remove this connection");
-    expect(container.querySelector('a[href="/apps/connect?source=anthropic"]')?.textContent)
-      .toBe("Add supported connection");
+    expect(container.textContent).toContain("Локальный и корпоративный API настраивается в агенте");
+    expect(container.querySelector('a[href="/apps/connect?source=anthropic"]')).toBeNull();
   });
 
   it("offers retry for a transient GitHub error without asking for another login", async () => {
@@ -1587,7 +1585,7 @@ describe("AppDetail", () => {
     getConnectionMock.mockResolvedValue(connection({ connectionPurpose: "ai", transport: "runtime_auth", healthStatus: "ok", config: { provider: "openai", method: "api_key" } }));
     listConnectionGrantsMock.mockResolvedValue({ connection: { id: "conn-1" }, grants: [organizationGrant({ status: "revoked" })], capabilities: fullCapabilities(), currentUserId: "user-1", members: [] });
     await renderAppDetail();
-    expect(container.textContent).toContain("Revoked");
+    expect(container.textContent).toContain("Локальный и корпоративный API настраивается в агенте");
     expect(container.textContent).not.toContain("Connected");
   });
 

@@ -11,7 +11,7 @@ describe("PaperclipLoading", () => {
     expect(html).toContain('role="status"');
     expect(html).toContain("min-h-dvh");
     expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain('<span class="sr-only">Loading…</span>');
+    expect(html).toContain('<span class="sr-only">Загрузка…</span>');
   });
 
   it("allows containing layouts to override the full-page height", () => {

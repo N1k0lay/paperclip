@@ -3,7 +3,7 @@ import { aiConnectionsApi } from "@/api/ai-connections";
 import { AiProviderSetup } from "@/components/ai-connections/AiProviderSetup";
 import { AiConnectionPoolConnector } from "@/components/ai-connections/AiConnectionPoolConnector";
 import { useEffect } from "react";
-import { isRetiredComposioConnection } from "@paperclipai/shared";
+import { aiProviderSchema, getAppStoreDefinition, isRetiredComposioConnection } from "@paperclipai/shared";
 import { findComposioCatalogApp } from "@paperclipai/shared/aggregator-app-catalog";
 import { toolsApi } from "@/api/tools";
 import { queryKeys } from "@/lib/queryKeys";
@@ -28,10 +28,13 @@ export function AppsConnect({ byoOnly = false, credentialSource = "paperclip_vau
   const source = searchParams.get("source") ?? appKey ?? searchParams.get("appKey");
   const reconnectId = searchParams.get("reconnect");
   const preset = aiProviderSetupPreset(source);
+  const method = searchParams.get("method");
+  const hostedModelSetup = Boolean(preset || (source !== "github" && aiProviderSchema.safeParse(source).success) || source?.startsWith("ai-router-")
+    || (source && getAppStoreDefinition(source)?.methods.some(candidate => candidate.key === method && candidate.purpose === "ai")));
   const aiReconnectRequested = Boolean(reconnectId && (preset || ["openai", "anthropic", "xai"].includes(source ?? "")));
-  const aiAccounts = useQuery({ queryKey: ["ai-connections", selectedCompanyId], queryFn: () => aiConnectionsApi.list(selectedCompanyId!), enabled: Boolean(selectedCompanyId && aiReconnectRequested) });
+  const aiAccounts = useQuery({ queryKey: ["ai-connections", selectedCompanyId], queryFn: () => aiConnectionsApi.list(selectedCompanyId!), enabled: Boolean(selectedCompanyId && aiReconnectRequested && !hostedModelSetup) });
   const aiReconnect = aiAccounts.data?.connections.find(c => c.id === reconnectId);
-  const gallery = useQuery({ queryKey: queryKeys.apps.gallery(selectedCompanyId ?? "__none__"), queryFn: () => toolsApi.listGallery(selectedCompanyId!), enabled: !!selectedCompanyId && !!source?.startsWith("ai-router-") });
+  const gallery = useQuery({ queryKey: queryKeys.apps.gallery(selectedCompanyId ?? "__none__"), queryFn: () => toolsApi.listGallery(selectedCompanyId!), enabled: !!selectedCompanyId && !!source?.startsWith("ai-router-") && !hostedModelSetup });
   const router = gallery.data?.apps.find(app => app.slug === source)?.aiConnectionRouter;
   const toolkit = searchParams.get("targetToolkit");
   const reuseComposio = source === "composio" && Boolean(toolkit && findComposioCatalogApp(toolkit))
@@ -45,6 +48,10 @@ export function AppsConnect({ byoOnly = false, credentialSource = "paperclip_vau
   useEffect(() => {
     if (hasSavedComposio) navigate(`/apps?source=composio&targetToolkit=${encodeURIComponent(toolkit!)}`, { replace: true });
   }, [hasSavedComposio, toolkit, navigate]);
+  if (hostedModelSetup) return <div className="space-y-3">
+    <p className="text-sm text-muted-foreground">Локальный и корпоративный API настраивается в агенте.</p>
+    <Button variant="outline" onClick={() => navigate("/agents/new")}>Настроить агента</Button>
+  </div>;
   if (reuseComposio && selectedCompanyId && (saved.isPending || hasSavedComposio)) return <p role="status" className="text-sm text-muted-foreground">Checking saved Composio accounts…</p>;
   if (reuseComposio && saved.isError) return <div className="space-y-3">
     <p role="alert" className="text-sm text-destructive">Couldn’t load your Composio accounts.</p>

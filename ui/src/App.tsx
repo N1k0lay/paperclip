@@ -583,15 +583,15 @@ export function OnboardingRoutePage() {
   }
 
   const title = matchedCompany
-    ? `Add another agent to ${matchedCompany.name}`
+    ? `Добавить агента в ${matchedCompany.name}`
     : companies.length > 0
-      ? "Create another organization"
-      : "Create your first organization";
+      ? "Создать ещё одну организацию"
+      : "Создайте первую организацию";
   const description = matchedCompany
-    ? "Run onboarding again to add an agent and a starter task for this organization."
+    ? "Добавьте агента и первую задачу для этой организации."
     : companies.length > 0
-      ? "Run onboarding again to create another organization and seed its first agent."
-      : "Get started by creating an organization and your first agent.";
+      ? "Создайте организацию и подключите её первого агента."
+      : "Создайте организацию и своего первого агента.";
 
   return (
     <div className="mx-auto max-w-xl py-10">
@@ -607,7 +607,7 @@ export function OnboardingRoutePage() {
             <p className="text-sm text-muted-foreground">
               {t("app.cloudCreateUnavailable", {
                 defaultValue:
-                  "Organizations are created in Paperclip Cloud. This instance can't reach it right now — try again from your Cloud portfolio.",
+                  "Создание организации в этом экземпляре недоступно. Обратитесь к администратору.",
               })}
             </p>
           ) : (
@@ -629,7 +629,7 @@ export function OnboardingRoutePage() {
                     : openOnboarding()
               }
             >
-              {matchedCompany ? "Add Agent" : "Start Onboarding"}
+              {matchedCompany ? "Добавить агента" : "Начать настройку"}
             </Button>
           )}
         </div>
@@ -724,7 +724,7 @@ function NoCompaniesStartPage() {
     <div className="mx-auto max-w-xl py-10">
       <div className="rounded-lg border border-border bg-card p-6">
         <h1 className="text-xl font-semibold">
-          {t("app.noCompanies.title", { defaultValue: "Create your first organization" })}
+          {t("app.noCompanies.title", { defaultValue: "Создайте первую организацию" })}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {t("app.noCompanies.description", { defaultValue: "Get started by creating an organization." })}
@@ -736,7 +736,7 @@ function NoCompaniesStartPage() {
             <p className="text-sm text-muted-foreground">
               {t("app.cloudCreateUnavailable", {
                 defaultValue:
-                  "Organizations are created in Paperclip Cloud. This instance can't reach it right now — try again from your Cloud portfolio.",
+                  "Создание организации в этом экземпляре недоступно. Обратитесь к администратору.",
               })}
             </p>
           ) : (

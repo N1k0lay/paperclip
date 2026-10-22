@@ -91,6 +91,11 @@ own policy and access review.
 Gaps: Settings APIs cover parts of configuration; pre-start database/binding/storage
 configuration is local operator tooling.
 
+CLI onboarding does not select or probe a cloud model provider. The legacy
+`configure --section llm` entry gives web agent setup instructions without
+rewriting stored configuration or credentials; model URL/key configuration belongs
+to the company-scoped agent wizard.
+
 Cloud stack Admins may update experimental settings through the trusted Cloud
 actor without receiving other instance-admin powers. This uses the current
 stack role on each request; company membership alone does not grant it.

@@ -138,8 +138,8 @@ describeEmbeddedPostgres("issue create onboarding first-task routes", () => {
       name: "CEO",
       role: "engineer",
       status: "running",
-      adapterType: "codex_local",
-      adapterConfig: {},
+      adapterType: "pi_local",
+      adapterConfig: { baseUrl: "http://localhost:11434/v1", model: "local/qwen" },
       runtimeConfig: {},
       permissions: {},
     });
@@ -206,9 +206,9 @@ describeEmbeddedPostgres("issue create onboarding first-task routes", () => {
     expect(payload.questions[0].selectionMode).toBe("single");
     expect(payload.questions[0].options.map((option) => option.id)).toEqual(["interview", "task"]);
     expect(payload.questions[0].options[0].label).toBe(
-      "Interview me and propose a plan and an agent team to execute it.",
+      "Обсудить задачу и подготовить план",
     );
-    expect(payload.questions[0].options[1]).toMatchObject({ label: "I have a task in mind", freeText: true });
+    expect(payload.questions[0].options[1]).toMatchObject({ label: "У меня уже есть задача", freeText: true });
 
     // The seeded card is read-only for the thread until the user answers: it
     // must not have queued a run by itself.

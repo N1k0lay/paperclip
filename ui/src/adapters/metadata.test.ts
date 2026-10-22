@@ -1,62 +1,15 @@
 import { describe, expect, it } from "vitest";
-import {
-  isEnabledAdapterType,
-  isValidAdapterType,
-  isVisualAdapterChoice,
-  listAdapterOptions,
-} from "./metadata";
-import type { UIAdapterModule } from "./types";
+import { isEnabledAdapterType, isValidAdapterType, isVisualAdapterChoice, listAdapterOptions } from "./metadata";
+import { getUIAdapter } from "./registry";
 
-const externalAdapter: UIAdapterModule = {
-  type: "external_test",
-  label: "External Test",
-  parseStdoutLine: () => [],
-  ConfigFields: () => null,
-  buildAdapterConfig: () => ({}),
-};
-
-describe("adapter metadata", () => {
-  it("treats registered external adapters as enabled by default", () => {
-    expect(isEnabledAdapterType("external_test")).toBe(true);
-
-    expect(
-      listAdapterOptions((type) => type, [externalAdapter]),
-    ).toEqual([
-      {
-        value: "external_test",
-        label: "external_test",
-        comingSoon: false,
-        hidden: false,
-        experimental: false,
-      },
-    ]);
-  });
-
-  it("keeps intentionally withheld built-in adapters marked as coming soon", () => {
-    expect(isEnabledAdapterType("process")).toBe(false);
-    expect(isEnabledAdapterType("http")).toBe(false);
-  });
-
-  it("marks the retired ACPX adapter as unavailable for new selections", () => {
-    expect(isEnabledAdapterType("acpx_local")).toBe(false);
-    expect(isValidAdapterType("acpx_local")).toBe(false);
-    expect(isVisualAdapterChoice("acpx_local")).toBe(false);
-
-    expect(
-      listAdapterOptions((type) => type, [
-        {
-          ...externalAdapter,
-          type: "acpx_local",
-        },
-      ]),
-    ).toEqual([
-      {
-        value: "acpx_local",
-        label: "acpx_local",
-        comingSoon: true,
-        hidden: false,
-        experimental: false,
-      },
-    ]);
+describe("local-only adapter metadata", () => {
+  it("offers only Pi even if legacy and external adapters are registered", () => {
+    expect(listAdapterOptions(type => type).map(adapter => adapter.value)).toEqual(["pi_local"]);
+    expect(listAdapterOptions(type => type, [getUIAdapter("pi_local"), getUIAdapter("codex_local"), getUIAdapter("external_test")]).map(adapter => adapter.value)).toEqual(["pi_local"]);
+    for (const type of ["pi_local", "codex_local", "paperclip_runner", "process", "http", "external_test"]) {
+      expect(isEnabledAdapterType(type)).toBe(type === "pi_local");
+      expect(isValidAdapterType(type)).toBe(type === "pi_local");
+      expect(isVisualAdapterChoice(type)).toBe(type === "pi_local");
+    }
   });
 });

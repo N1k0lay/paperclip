@@ -22,35 +22,17 @@ export function listKnownAdapterTypes(): string[] {
   return listUIAdapters().map((adapter) => adapter.type);
 }
 
-/**
- * Check whether an adapter type is enabled (not "coming soon").
- * Unknown types (external adapters) are always considered enabled.
- */
+/** Historical parsers remain registered; only the local runtime is selectable. */
 export function isEnabledAdapterType(type: string): boolean {
-  // Check display registry first — built-in adapters like process/http are
-  // intentionally withheld even though they're registered as UI adapters.
-  if (getAdapterDisplay(type).comingSoon) return false;
-  // All other types (registered or external) are enabled.
-  return true;
+  return type === "pi_local";
 }
 
-/**
- * Check whether an adapter type is a valid choice for new agent creation.
- * Includes all registered UI adapters (built-in + external) and
- * any non-"coming soon" adapter from the display registry.
- */
 export function isValidAdapterType(type: string): boolean {
-  if (getAdapterDisplay(type).comingSoon) return false;
-  return true;
+  return type === "pi_local";
 }
 
-/**
- * Check whether an adapter should appear in card-style visual pickers.
- * Experimental adapters can remain selectable from explicit configuration
- * dropdowns without being recommended during onboarding or setup flows.
- */
 export function isVisualAdapterChoice(type: string): boolean {
-  return !getAdapterDisplay(type).hideFromVisualSelection;
+  return type === "pi_local";
 }
 
 /**
@@ -62,7 +44,7 @@ export function listAdapterOptions(
   adapters: UIAdapterModule[] = listUIAdapters(),
 ): AdapterOptionMetadata[] {
   const getLabel = labelFor ?? getAdapterLabel;
-  return adapters.map((adapter) => ({
+  return adapters.filter(adapter => adapter.type === "pi_local").map((adapter) => ({
     value: adapter.type,
     label: getLabel(adapter.type),
     comingSoon: !!getAdapterDisplay(adapter.type).comingSoon,

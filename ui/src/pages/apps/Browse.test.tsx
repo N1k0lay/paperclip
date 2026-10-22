@@ -251,27 +251,15 @@ describe("Connectors landing page", () => {
     return client;
   }
 
-  it("shows provider catalog rows and splits legacy gateway accounts by API format", async () => {
-    const slugs = ["notion", "openrouter", "bedrock", "google", "responses-api", "messages-api", "chat-completions-api", "local"];
-    listGalleryMock.mockResolvedValue({ apps: slugs.map(slug => getAppStoreDefinition(slug)) });
-    listApplicationsMock.mockResolvedValue({ applications: [application({ id: "gateway-app", name: "Model gateway", applicationKey: "app-gallery:gateway", metadata: { sourceTemplateKey: "gateway" } })] });
-    listConnectionsMock.mockResolvedValue({ connections: ["responses", "messages"].map(protocol => connection({
-      id: protocol, name: `${protocol} account`, applicationId: "gateway-app", connectionPurpose: "ai",
-      config: { sourceTemplateKey: "gateway", ai: { provider: protocol === "messages" ? "anthropic" : "openai", method: "api_key", routing: { kind: "gateway", protocol, auth: "bearer", baseUrl: "https://models.example.com/v1", models: [] } } },
-    })) });
+  it("hides model provider accounts while preserving GitHub tools", async () => {
+    listGalleryMock.mockResolvedValue({ apps: ["github", "notion", "openai", "anthropic", "openrouter", "local"].map(getAppStoreDefinition).filter(Boolean) });
+    listConnectionsMock.mockResolvedValue({ connections: [connection({ id: "old-ai-account", connectionPurpose: "ai", name: "Old hosted account" })] });
     await renderBrowse();
-    expect(container.textContent).not.toContain("Connect a model provider");
-    expect(container.textContent).not.toContain("Model gateway");
-    for (const slug of slugs) expect(container.querySelector(`[data-app-slug="${slug}"]`)).not.toBeNull();
-    const responses = container.querySelector('[data-app-slug="responses-api"]')!;
-    const messages = container.querySelector('[data-app-slug="messages-api"]')!;
-    expect(responses.textContent).toContain("responses account");
-    expect(responses.textContent).not.toContain("messages account");
-    expect(messages.textContent).toContain("messages account");
-    const bedrock = container.querySelector('[data-app-slug="bedrock"]')!;
-    const connect = Array.from(bedrock.querySelectorAll('button')).find(button => button.textContent?.includes("Connect"))!;
-    await act(() => connect.click());
-    expect(navigateMock).toHaveBeenCalledWith("/apps/connect?source=bedrock");
+    expect(container.querySelector('[data-app-slug="github"]')).not.toBeNull();
+    expect(container.querySelector('[data-app-slug="notion"]')).not.toBeNull();
+    for (const slug of ["openai", "anthropic", "openrouter", "local"]) expect(container.querySelector(`[data-app-slug="${slug}"]`)).toBeNull();
+    expect(container.textContent).not.toContain("Old hosted account");
+    expect(container.textContent).not.toContain("Connect Copilot");
   });
 
   it("offers assistant setup from Connections without choosing an agent", async () => {
@@ -1045,10 +1033,7 @@ describe("Connectors landing page", () => {
     expect(container.textContent).not.toContain("Chat with agents");
     await act(() => void container.querySelector<HTMLButtonElement>('button[aria-label="Add key GitHub"]')!.click());
     expect(navigateMock).toHaveBeenLastCalledWith("/apps/connect?source=github");
-    const copilot = [...container.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "Connect Copilot")!;
-    expect(copilot).toBeTruthy();
-    await act(() => void copilot.click());
-    expect(navigateMock).toHaveBeenLastCalledWith("/apps/connect?source=github&method=copilot-token");
+    expect(container.textContent).not.toContain("Connect Copilot");
   });
 
   it("names what the card will actually ask for", async () => {

@@ -37,6 +37,13 @@ Save & exit keeps its configuration; Finish setup on the agent returns to the
 same record. Final submission requests approval when required, then follows the
 existing preparation and verification lifecycle.
 
+In the Skaz fork, the only runtime is **Локальный / корпоративный API** through
+Pi. Enter the OpenAI-compatible base URL, model ID, and optional secret-backed API
+key. This path uses the legacy Pi runtime, skips external model discovery, and
+supports gateways without authentication. Check the connection before finishing.
+Each agent has its own endpoint configuration; hosted-provider adapters and
+account selection are unavailable in the UI and rejected by the server. See [Russian setup](../../README.ru.md).
+
 ### `agent-configuration`
 
 Open `/agents/:agentId` and the configuration/instruction surfaces it exposes.

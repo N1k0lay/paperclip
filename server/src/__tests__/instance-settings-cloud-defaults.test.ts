@@ -21,18 +21,14 @@ function managedConfig(features: ManagedInstanceConfig["features"] = {}): Manage
 }
 
 describe("applyCloudCatalogDefaults", () => {
-  it("pins the catalog so this rule has something to guard", () => {
-    // The rule exists for flags that default on for self-hosted and off for
-    // Cloud. If that set ever empties, the helper is dead code and should go.
-    const guarded = Object.entries(INSTANCE_FEATURE_CATALOG)
-      .filter(([, entry]) => entry.selfHostedDefault === true && entry.cloudDefault === false)
-      .map(([key]) => key);
-    expect(guarded).toContain("enableNativeRunner");
+  it("keeps the optional native runner off for new local and Cloud instances", () => {
+    expect(INSTANCE_FEATURE_CATALOG.enableNativeRunner.selfHostedDefault).toBe(false);
+    expect(INSTANCE_FEATURE_CATALOG.enableNativeRunner.cloudDefault).toBe(false);
   });
 
   it("leaves self-hosted instances on the schema default", () => {
     const experimental = applyCloudCatalogDefaults(normalizeExperimentalSettings({}), {}, null);
-    expect(experimental.enableNativeRunner).toBe(true);
+    expect(experimental.enableNativeRunner).toBe(false);
   });
 
   it("re-asserts the Cloud default when the tenant row and the overlay omit the flag", () => {
@@ -96,19 +92,18 @@ describe("stripCloudCatalogDefaultEchoes", () => {
     ).experimental;
   }
 
-  it("does not persist the self-hosted default on Cloud during an unrelated write", () => {
+  it("keeps matching local and Cloud defaults off during an unrelated write", () => {
     const config = managedConfig();
     const stored = persisted({}, { enableStatusCards: true }, config);
     expect(stored.enableStatusCards).toBe(true);
-    expect("enableNativeRunner" in stored).toBe(false);
-    // The Cloud default still applies on the next read.
+    expect(stored.enableNativeRunner).toBe(false);
     expect(readBack(stored, config).enableNativeRunner).toBe(false);
   });
 
-  it("treats a full-GET echo of the Cloud default as no choice", () => {
+  it("keeps an echoed matching local and Cloud default off", () => {
     const config = managedConfig();
     const stored = persisted({}, { enableNativeRunner: false, enableStatusCards: true }, config);
-    expect("enableNativeRunner" in stored).toBe(false);
+    expect(stored.enableNativeRunner).toBe(false);
     expect(readBack(stored, config).enableNativeRunner).toBe(false);
   });
 
@@ -128,7 +123,7 @@ describe("stripCloudCatalogDefaultEchoes", () => {
 
   it("leaves the whole normalized object in place for self-hosted rows", () => {
     const stored = persisted({}, { enableStatusCards: true }, null);
-    expect(stored.enableNativeRunner).toBe(true);
+    expect(stored.enableNativeRunner).toBe(false);
     expect(stored).toEqual(applyExperimentalSettingsPatch({}, { enableStatusCards: true }));
   });
 });

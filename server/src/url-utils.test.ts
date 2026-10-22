@@ -22,30 +22,35 @@ describe("rewriteUrlPort", () => {
 });
 
 describe("rewriteLoopbackUrlPort", () => {
+  it("preserves the published Docker or proxy port independently of the server port", () => {
+    expect(rewriteLoopbackUrlPort("http://localhost:3320", 3100, 3100)).toBe("http://localhost:3320");
+    expect(rewriteLoopbackUrlPort("http://localhost:3320", 3101, 3100)).toBe("http://localhost:3320");
+    expect(rewriteLoopbackUrlPort("http://localhost:3100", 3101, 3100)).toBe("http://localhost:3101/");
+  });
   it("rewrites the port for loopback base URLs", () => {
-    expect(rewriteLoopbackUrlPort("http://localhost:5678", 3101)).toBe("http://localhost:3101/");
-    expect(rewriteLoopbackUrlPort("http://127.0.0.1:9999", 3101)).toBe("http://127.0.0.1:3101/");
-    expect(rewriteLoopbackUrlPort("http://[::1]:9999", 3101)).toBe("http://[::1]:3101/");
+    expect(rewriteLoopbackUrlPort("http://localhost:5678", 3101, 5678)).toBe("http://localhost:3101/");
+    expect(rewriteLoopbackUrlPort("http://127.0.0.1:9999", 3101, 9999)).toBe("http://127.0.0.1:3101/");
+    expect(rewriteLoopbackUrlPort("http://[::1]:9999", 3101, 9999)).toBe("http://[::1]:3101/");
   });
 
   it("leaves explicit external base URLs untouched (BRO-1558)", () => {
     // A Tailscale Serve listener on :8443 must survive; rewriting its port to the internal
     // listen port produced an unreachable URL that leaked to agents as a dead PAPERCLIP_API_URL.
     const serve = "https://erics-mac-studio-1.tailc54c7.ts.net:8443";
-    expect(rewriteLoopbackUrlPort(serve, 3101)).toBe(serve);
+    expect(rewriteLoopbackUrlPort(serve, 3101, 8443)).toBe(serve);
   });
 
   it("leaves URLs without an explicit port stable", () => {
-    expect(rewriteLoopbackUrlPort("https://paperclip.example.com", 3101)).toBe(
+    expect(rewriteLoopbackUrlPort("https://paperclip.example.com", 3101, 3100)).toBe(
       "https://paperclip.example.com",
     );
-    expect(rewriteLoopbackUrlPort("http://localhost", 3101)).toBe("http://localhost");
+    expect(rewriteLoopbackUrlPort("http://localhost", 3101, 3100)).toBe("http://localhost");
   });
 
   it("passes through empty and unparseable inputs", () => {
-    expect(rewriteLoopbackUrlPort(undefined, 3101)).toBeUndefined();
-    expect(rewriteLoopbackUrlPort("", 3101)).toBeUndefined();
-    expect(rewriteLoopbackUrlPort("not a url", 3101)).toBe("not a url");
+    expect(rewriteLoopbackUrlPort(undefined, 3101, 3100)).toBeUndefined();
+    expect(rewriteLoopbackUrlPort("", 3101, 3100)).toBeUndefined();
+    expect(rewriteLoopbackUrlPort("not a url", 3101, 3100)).toBe("not a url");
   });
 });
 

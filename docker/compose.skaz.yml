@@ -1,0 +1,50 @@
+name: skaz
+
+services:
+  skaz:
+    image: ${SKAZ_IMAGE:-skaz:local}
+    pull_policy: never
+    restart: unless-stopped
+    pids_limit: 2048
+    stop_grace_period: 90s
+    env_file:
+      - skaz.env
+    environment:
+      # The PostgreSQL overlay supplies this value for a standalone installation.
+      # The image entrypoint rejects an empty URL before starting the server.
+      DATABASE_URL: ${DATABASE_URL:-}
+      HOST: 0.0.0.0
+      PORT: "3100"
+      SERVE_UI: "true"
+      PAPERCLIP_API_URL: http://127.0.0.1:3100
+      PAPERCLIP_HOME: /paperclip
+      PAPERCLIP_INSTANCE_ID: default
+      PAPERCLIP_CONFIG: /paperclip/instances/default/config.json
+      PAPERCLIP_DEPLOYMENT_MODE: authenticated
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: private
+      PAPERCLIP_BIND: lan
+      PAPERCLIP_PUBLIC_URL: ${PAPERCLIP_PUBLIC_URL:-http://localhost:3100}
+      PAPERCLIP_ALLOWED_HOSTNAMES: ${PAPERCLIP_ALLOWED_HOSTNAMES:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in skaz.env}
+      PAPERCLIP_AGENT_JWT_SECRET: ${PAPERCLIP_AGENT_JWT_SECRET:?Set PAPERCLIP_AGENT_JWT_SECRET in skaz.env}
+      PAPERCLIP_TOOL_ACTION_SIGNING_SECRET: ${PAPERCLIP_TOOL_ACTION_SIGNING_SECRET:?Set PAPERCLIP_TOOL_ACTION_SIGNING_SECRET in skaz.env}
+      PAPERCLIP_MIGRATION_AUTO_APPLY: "true"
+      PAPERCLIP_MIGRATION_PROMPT: never
+      PAPERCLIP_STORAGE_PROVIDER: ${PAPERCLIP_STORAGE_PROVIDER:-local_disk}
+      PAPERCLIP_TELEMETRY_DISABLED: "1"
+      DO_NOT_TRACK: "1"
+      PAPERCLIP_ANNOUNCEMENTS_ENABLED: "false"
+      AWS_EC2_METADATA_DISABLED: "true"
+    ports:
+      - "${SKAZ_BIND_IP:-127.0.0.1}:${SKAZ_PORT:-3100}:3100"
+    volumes:
+      - skaz-data:/paperclip
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3100/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 6
+
+volumes:
+  skaz-data:

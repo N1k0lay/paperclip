@@ -1,7 +1,9 @@
 import type { CreateConfigValues } from "@paperclipai/adapter-utils";
 
 export const defaultCreateValues: CreateConfigValues = {
-  adapterType: "claude_local",
+  adapterType: "pi_local",
+  runner: "legacy",
+  resolvedRunner: "legacy",
   cwd: "",
   instructionsFilePath: "",
   promptTemplate: "",

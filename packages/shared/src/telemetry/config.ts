@@ -77,7 +77,7 @@ export function resolveTelemetryConfig(
   if (isCI()) {
     return { enabled: false, ...caps };
   }
-  if (fileConfig?.enabled === false) {
+  if (fileConfig?.enabled !== true) {
     return { enabled: false, ...caps };
   }
 

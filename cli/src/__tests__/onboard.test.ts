@@ -1,11 +1,18 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import * as p from "@clack/prompts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { onboard } from "../commands/onboard.js";
 import type { PaperclipConfig } from "../config/schema.js";
+import * as databasePrompts from "../prompts/database.js";
+import * as loggingPrompts from "../prompts/logging.js";
+import * as serverPrompts from "../prompts/server.js";
+import * as storagePrompts from "../prompts/storage.js";
 
 const runCommandMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@clack/prompts", { spy: true });
 
 vi.mock("../commands/run.js", () => ({
   runCommand: runCommandMock,
@@ -16,7 +23,7 @@ const ORIGINAL_CWD = process.cwd();
 const ORIGINAL_PATH = process.env.PATH;
 const ORIGINAL_EXIT_CODE = process.exitCode;
 
-function createExistingConfigFixture() {
+function createExistingConfigFixture(llm?: PaperclipConfig["llm"]) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-onboard-"));
   const runtimeRoot = path.join(root, "runtime");
   const configPath = path.join(root, ".paperclip", "config.json");
@@ -26,6 +33,7 @@ function createExistingConfigFixture() {
       updatedAt: "2026-03-29T00:00:00.000Z",
       source: "configure",
     },
+    ...(llm && { llm }),
     database: {
       mode: "embedded-postgres",
       embeddedPostgresDataDir: path.join(runtimeRoot, "db"),
@@ -80,7 +88,7 @@ function createExistingConfigFixture() {
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
 
-  return { configPath, configText: fs.readFileSync(configPath, "utf8") };
+  return { configPath, configText: fs.readFileSync(configPath, "utf8"), config };
 }
 
 function createFreshConfigPath() {
@@ -90,6 +98,7 @@ function createFreshConfigPath() {
 
 describe("onboard", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     process.env = { ...ORIGINAL_ENV };
     delete process.env.PAPERCLIP_AGENT_JWT_SECRET;
     delete process.env.PAPERCLIP_TOOL_ACTION_SIGNING_SECRET;
@@ -116,19 +125,61 @@ describe("onboard", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     process.env = { ...ORIGINAL_ENV };
     process.chdir(ORIGINAL_CWD);
     process.exitCode = ORIGINAL_EXIT_CODE;
   });
 
   it("preserves an existing config when rerun without flags", async () => {
-    const fixture = createExistingConfigFixture();
+    const fixture = createExistingConfigFixture({ provider: "openai", apiKey: "preserved-legacy-key" });
 
     await onboard({ config: fixture.configPath });
 
     expect(fs.readFileSync(fixture.configPath, "utf8")).toBe(fixture.configText);
     expect(fs.existsSync(`${fixture.configPath}.backup`)).toBe(false);
     expect(fs.existsSync(path.join(path.dirname(fixture.configPath), ".env"))).toBe(true);
+  });
+
+  it("advanced setup configures infrastructure without cloud model prompts or probes", async () => {
+    const fixture = createExistingConfigFixture();
+    const configPath = createFreshConfigPath();
+    process.env.PAPERCLIP_HOME = path.dirname(path.dirname(configPath));
+    const select = vi.mocked(p.select).mockResolvedValueOnce("advanced").mockResolvedValue("claude");
+    const confirm = vi.mocked(p.confirm).mockResolvedValue(true);
+    const password = vi.mocked(p.password).mockResolvedValue("unneeded-cloud-key");
+    const note = vi.mocked(p.note);
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(databasePrompts, "promptDatabase").mockResolvedValue(fixture.config.database);
+    vi.spyOn(loggingPrompts, "promptLogging").mockResolvedValue(fixture.config.logging);
+    vi.spyOn(serverPrompts, "promptServer").mockResolvedValue({
+      server: fixture.config.server,
+      auth: fixture.config.auth,
+    });
+    vi.spyOn(storagePrompts, "promptStorage").mockResolvedValue(fixture.config.storage);
+
+    try {
+      await onboard({ config: configPath, invokedByRun: true });
+
+      const saved = JSON.parse(fs.readFileSync(configPath, "utf8")) as PaperclipConfig;
+      expect(saved.llm).toBeUndefined();
+      expect(saved.database).toEqual(fixture.config.database);
+      expect(saved.logging).toEqual(fixture.config.logging);
+      expect(saved.server).toEqual(fixture.config.server);
+      expect(saved.auth).toEqual(fixture.config.auth);
+      expect(saved.storage).toEqual(fixture.config.storage);
+      expect(saved.secrets.provider).toBe("local_encrypted");
+      expect(select).toHaveBeenCalledTimes(1);
+      expect(confirm).not.toHaveBeenCalled();
+      expect(password).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(note).toHaveBeenCalledWith(expect.stringContaining("веб-мастере создания агента"), "Configuration saved");
+    } finally {
+      fs.rmSync(path.dirname(path.dirname(fixture.configPath)), { recursive: true, force: true });
+      fs.rmSync(path.dirname(path.dirname(configPath)), { recursive: true, force: true });
+    }
   });
 
   it("preserves an existing config when rerun with --yes", async () => {
@@ -225,6 +276,7 @@ describe("onboard", () => {
     await onboard({ config: configPath, yes: true, invokedByRun: true });
 
     const raw = JSON.parse(fs.readFileSync(configPath, "utf8")) as PaperclipConfig;
+    expect(raw.telemetry.enabled).toBe(false);
     expect(raw.server.deploymentMode).toBe("local_trusted");
     expect(raw.server.exposure).toBe("private");
     expect(raw.server.bind).toBe("loopback");

@@ -1,3 +1,4 @@
+import { i18n, useTranslation } from "@/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { Clock3, FileDiff, GitCommit, type LucideIcon } from "lucide-react";
 import { healthApi, type HealthStatus } from "@/api/health";
@@ -5,10 +6,10 @@ import { instanceSettingsApi } from "@/api/instanceSettings";
 import { queryKeys } from "@/lib/queryKeys";
 
 function formatTimestamp(value: string | null | undefined): string {
-  if (!value) return "Unavailable";
+  if (!value) return i18n.t("server.unavailable", { ns: "shell" });
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unavailable";
-  return new Intl.DateTimeFormat(undefined, {
+  if (Number.isNaN(date.getTime())) return i18n.t("server.unavailable", { ns: "shell" });
+  return new Intl.DateTimeFormat(i18n.resolvedLanguage, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
@@ -24,27 +25,27 @@ function restartTimestamp(health: HealthStatus | undefined): string | null {
 
 function commitLabel(health: HealthStatus | undefined): string {
   const git = health?.serverInfo?.git;
-  if (!git?.available) return "Commit unavailable";
+  if (!git?.available) return i18n.t("server.commitUnavailable", { ns: "shell" });
   return `${git.shortSha} · ${git.subject}`;
 }
 
 function localChangesLabel(health: HealthStatus | undefined): string {
   const git = health?.serverInfo?.git;
-  if (!git?.available) return "Unavailable";
+  if (!git?.available) return i18n.t("server.unavailable", { ns: "shell" });
   const localChanges = git.localChanges;
-  if (!localChanges) return "Change status unavailable";
-  if (!localChanges.available) return "Change status unavailable";
-  if (!localChanges.hasLocalChanges) return "Clean checkout";
+  if (!localChanges) return i18n.t("server.changesUnavailable", { ns: "shell" });
+  if (!localChanges.available) return i18n.t("server.changesUnavailable", { ns: "shell" });
+  if (!localChanges.hasLocalChanges) return i18n.t("server.clean", { ns: "shell" });
 
   const parts = [
-    [localChanges.stagedFileCount, "staged"],
-    [localChanges.unstagedFileCount, "unstaged"],
-    [localChanges.untrackedFileCount, "untracked"],
+    [localChanges.stagedFileCount, i18n.t("server.staged", { ns: "shell" })],
+    [localChanges.unstagedFileCount, i18n.t("server.unstaged", { ns: "shell" })],
+    [localChanges.untrackedFileCount, i18n.t("server.untracked", { ns: "shell" })],
   ]
     .filter(([count]) => Number(count) > 0)
     .map(([count, label]) => `${count} ${label}`);
 
-  return parts.length > 0 ? `Local changes present (${parts.join(", ")})` : "Local changes present";
+  return parts.length > 0 ? i18n.t("server.localChangesDetail", { ns: "shell", details: parts.join(", ") }) : i18n.t("server.localChanges", { ns: "shell" });
 }
 
 function ServerInfoRow({
@@ -78,6 +79,7 @@ function ServerInfoRow({
 }
 
 export function SidebarServerInfo() {
+  const { t } = useTranslation("shell");
   const experimentalQuery = useQuery({
     queryKey: queryKeys.instance.experimentalSettings,
     queryFn: () => instanceSettingsApi.getExperimental(),
@@ -106,34 +108,34 @@ export function SidebarServerInfo() {
   const restartedAt = restartTimestamp(health);
   const restartedAtIsValid = isValidTimestamp(restartedAt);
   const lastRestartedLabel = healthUnavailable
-    ? "Health unavailable"
+    ? t("server.healthUnavailable")
     : isWaitingForHealth
-      ? "Loading..."
+      ? t("server.loading")
       : formatTimestamp(restartedAt);
   const commit = healthUnavailable
-    ? "Health unavailable"
+    ? t("server.healthUnavailable")
     : isWaitingForHealth
-      ? "Loading..."
+      ? t("server.loading")
       : commitLabel(health);
   const localChanges = healthUnavailable
-    ? "Health unavailable"
+    ? t("server.healthUnavailable")
     : isWaitingForHealth
-      ? "Loading..."
+      ? t("server.loading")
       : localChangesLabel(health);
 
   return (
     <div className="mt-2 border-t border-border pt-2">
       <p className="px-3 pb-1 pt-1 text-(length:--text-micro) font-medium uppercase tracking-wide text-muted-foreground">
-        Server
+        {t("server.title")}
       </p>
       <ServerInfoRow
         icon={Clock3}
-        label="Last restarted"
+        label={t("server.lastRestarted")}
         value={lastRestartedLabel}
         dateTime={!healthUnavailable && !isWaitingForHealth && restartedAtIsValid ? restartedAt : null}
       />
-      <ServerInfoRow icon={GitCommit} label="Running commit" value={commit} />
-      <ServerInfoRow icon={FileDiff} label="Checkout state" value={localChanges} />
+      <ServerInfoRow icon={GitCommit} label={t("server.runningCommit")} value={commit} />
+      <ServerInfoRow icon={FileDiff} label={t("server.checkout")} value={localChanges} />
     </div>
   );
 }

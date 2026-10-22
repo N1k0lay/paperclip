@@ -32,7 +32,7 @@ export function rewriteUrlPort(rawUrl: string | undefined, port: number): string
 }
 
 /**
- * Like {@link rewriteUrlPort}, but only for loopback hosts.
+ * Follow an automatic port fallback only when the loopback URL uses the requested server port.
  *
  * Used at server startup for the main instance's `authPublicBaseUrl`. An explicit
  * *external* base URL (e.g. a Tailscale Serve listener on a non-default port like
@@ -43,11 +43,12 @@ export function rewriteUrlPort(rawUrl: string | undefined, port: number): string
 export function rewriteLoopbackUrlPort(
   rawUrl: string | undefined,
   port: number,
+  requestedPort: number,
 ): string | undefined {
   if (!rawUrl) return undefined;
   try {
     const parsed = new URL(rawUrl);
-    if (!parsed.port) return rawUrl;
+    if (!parsed.port || parsed.port !== String(requestedPort)) return rawUrl;
     if (!isLoopbackHost(parsed.hostname)) return rawUrl;
     parsed.port = String(port);
     return parsed.toString();

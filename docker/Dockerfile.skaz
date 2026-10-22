@@ -1,0 +1,68 @@
+ARG NODE_IMAGE=node:24-bookworm-slim
+FROM ${NODE_IMAGE} AS base
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates gosu git openssh-client curl ripgrep python3 tini \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install --global --no-audit --no-fund pnpm@9.15.4 @earendil-works/pi-coding-agent@0.74.0 \
+    && mkdir -p /paperclip \
+    && chown node:node /paperclip
+
+FROM base AS build
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY patches/ patches/
+RUN pnpm fetch --frozen-lockfile --ignore-scripts
+COPY . .
+# Cloud CLI postinstall hooks are excluded; build only the native libraries used by the app.
+RUN pnpm install --offline --frozen-lockfile --ignore-scripts \
+    && pnpm rebuild esbuild node-pty sharp better-sqlite3
+RUN pnpm --filter @paperclipai/paperclip-eval-kernel build \
+    && pnpm --filter @paperclipai/paperclip-runner exec tsc -p tsconfig.json \
+    && pnpm --filter @paperclipai/paperclip-runner exec tsc -p tsconfig.surfaces.json \
+    && pnpm --filter @paperclipai/plugin-sdk build
+ARG PAPERCLIP_BUILD_COMMIT=""
+ENV NODE_OPTIONS=--max-old-space-size=4096
+RUN pnpm --filter @paperclipai/ui build \
+    && pnpm --filter @paperclipai/server exec tsc \
+    && mkdir -p server/dist/onboarding-assets server/dist/built-ins server/dist/services/scripts server/dist/vendor/paperclip-runner \
+    && cp -R server/src/onboarding-assets/. server/dist/onboarding-assets/ \
+    && cp -R server/src/built-ins/. server/dist/built-ins/ \
+    && cp -R server/src/services/scripts/. server/dist/services/scripts/ \
+    && cp -R packages/paperclip-runner/dist/. server/dist/vendor/paperclip-runner/ \
+    && node server/scripts/write-build-stamp.mjs \
+    && node server/scripts/bundle-runtime.mjs \
+    && test -s server/dist-runtime/index.mjs \
+    && test -s ui/dist/index.html
+
+FROM base AS production
+WORKDIR /app
+COPY --from=build /app /app
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY scripts/skaz-container-entrypoint.sh /usr/local/bin/skaz-container-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/skaz-container-entrypoint.sh
+ENV NODE_ENV=production \
+    HOME=/paperclip \
+    HOST=0.0.0.0 \
+    PORT=3100 \
+    SERVE_UI=true \
+    PAPERCLIP_API_URL=http://127.0.0.1:3100 \
+    PAPERCLIP_HOME=/paperclip \
+    PAPERCLIP_INSTANCE_ID=default \
+    PAPERCLIP_CONFIG=/paperclip/instances/default/config.json \
+    PAPERCLIP_BIND=lan \
+    PAPERCLIP_DEPLOYMENT_MODE=authenticated \
+    PAPERCLIP_DEPLOYMENT_EXPOSURE=private \
+    PAPERCLIP_MIGRATION_AUTO_APPLY=true \
+    PAPERCLIP_MIGRATION_PROMPT=never \
+    PAPERCLIP_TELEMETRY_DISABLED=1 \
+    PAPERCLIP_ANNOUNCEMENTS_ENABLED=false \
+    PAPERCLIP_UPDATE_CHECK=0 \
+    AWS_EC2_METADATA_DISABLED=true \
+    PI_OFFLINE=1
+EXPOSE 3100
+ENTRYPOINT ["/usr/bin/tini", "-s", "--", "skaz-container-entrypoint.sh"]
+CMD ["node", "server/dist-runtime/index.mjs"]

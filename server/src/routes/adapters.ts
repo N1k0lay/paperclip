@@ -49,7 +49,6 @@ import type {
 import { loadExternalAdapterPackage, getUiParserSource, getOrExtractUiParserSource, reloadExternalAdapter } from "../adapters/plugin-loader.js";
 import { logger } from "../middleware/logger.js";
 import { badRequest, forbidden } from "../errors.js";
-import { isCloudManagedInstance } from "../services/cloud-instance.js";
 import { getHiddenSettings } from "../services/settings-visibility.js";
 import { assertBoardOrgAccess, assertCompanyAccess, assertInstanceAdmin } from "./authz.js";
 import { BUILTIN_ADAPTER_TYPES } from "../adapters/builtin-adapter-types.js";
@@ -67,11 +66,8 @@ const execFileAsync = promisify(execFile);
  * bundled-only plugin install floor in plugin-install-guard.ts).
  */
 function assertAdapterCodeInstallAllowed() {
-  if (isCloudManagedInstance()) {
-    throw forbidden("Adapter installation is platform-managed on cloud-managed instances", {
-      code: "adapter_install_platform_managed",
-    });
-  }
+  throw forbidden("Установка внешних адаптеров отключена: используйте URL локального или корпоративного API.");
+
 }
 
 /**
@@ -297,15 +293,12 @@ export function adapterRoutes(options: {
     await waitForExternalAdapters();
 
     const registeredAdapters = listServerAdapters();
-    const externalRecords = new Map(
-      listAdapterPlugins().map((r) => [r.type, r]),
-    );
     const disabledSet = new Set(getDisabledAdapterTypes());
     // One shared implementation, with independent provider rollouts. Explicit
     // adapter-admin disabling still applies to both choices.
 
     const result: AdapterInfo[] = registeredAdapters.map((adapter) =>
-      buildAdapterInfo(adapter, externalRecords.get(adapter.type), disabledSet, target),
+      buildAdapterInfo(adapter, undefined, disabledSet, target),
     ).sort((a, b) => a.type.localeCompare(b.type));
 
     res.json(result);
@@ -615,6 +608,7 @@ export function adapterRoutes(options: {
    */
   router.post("/adapters/:type/reload", async (req, res) => {
     assertInstanceAdmin(req);
+    assertAdapterCodeInstallAllowed();
     assertAdapterManagementVisible();
 
     const type = req.params.type;

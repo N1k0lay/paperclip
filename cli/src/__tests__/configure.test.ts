@@ -1,13 +1,17 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import * as p from "@clack/prompts";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { configure } from "../commands/configure.js";
 import type { PaperclipConfig } from "../config/schema.js";
+
+vi.mock("@clack/prompts", { spy: true });
 
 const ORIGINAL_EXIT_CODE = process.exitCode;
 
 afterEach(() => {
+  vi.restoreAllMocks();
   process.exitCode = ORIGINAL_EXIT_CODE;
 });
 
@@ -70,6 +74,29 @@ function writeBaseConfig(configPath: string) {
 }
 
 describe("configure command", () => {
+  it("directs legacy LLM configuration to the web wizard without changing saved credentials", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-configure-llm-"));
+    const configPath = path.join(root, "config.json");
+    writeBaseConfig(configPath);
+    const config = JSON.parse(fs.readFileSync(configPath, "utf8")) as PaperclipConfig;
+    config.llm = { provider: "claude", apiKey: "preserved-legacy-key" };
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const original = fs.readFileSync(configPath, "utf8");
+    const confirm = vi.mocked(p.confirm).mockResolvedValue(false);
+    const info = vi.mocked(p.log.info);
+
+    try {
+      await configure({ config: configPath, section: "llm" });
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(fs.readFileSync(configPath, "utf8")).toBe(original);
+      expect(fs.existsSync(`${configPath}.backup`)).toBe(false);
+      expect(info).toHaveBeenCalledWith(expect.stringContaining("веб-мастере создания агента"));
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("sets a failing exit code for unknown sections", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-configure-"));
     const configPath = path.join(root, "config.json");

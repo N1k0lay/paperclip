@@ -428,6 +428,15 @@ describe("AppsConnect — Connect with a link (M4 frame)", () => {
     return root;
   }
 
+  it.each(["source=openai", "source=anthropic", "source=github&method=copilot-token", "source=ai-router-example"])("blocks hosted model setup deep links: %s", async query => {
+    mockSearch.value = query;
+    await render();
+    expect(container.textContent).toContain("Локальный и корпоративный API настраивается в агенте");
+    expect(container.querySelector('input[type="password"]')).toBeNull();
+    expect(connectAppMock).not.toHaveBeenCalled();
+    expect(startOAuthMock).not.toHaveBeenCalled();
+  });
+
   it("keeps Honcho setup blocked until the provider workspace is supplied", async () => {
     const honcho = CONNECTABLE_APP_DEFINITIONS.find((app) => app.slug === "honcho")!;
     experimentalMock.mockResolvedValue({ enableMemoryConnectors: true });
@@ -1017,87 +1026,6 @@ describe("AppsConnect — Connect with a link (M4 frame)", () => {
   // credential is entered.
   // -------------------------------------------------------------------------
 
-  it.each([false, true])("offers both Anthropic methods without the obsolete REST option (task repair: %s)", async (taskRepair) => {
-    const createAiAccount = vi.spyOn(aiConnectionsApi, "create").mockResolvedValue({
-      connectionId: "anthropic-ai-account", grantId: "anthropic-ai-grant",
-    });
-    mockParams.appKey = "anthropic";
-    listGalleryMock.mockResolvedValue({ apps: [getAppStoreDefinition("anthropic")] });
-    const client = new QueryClient({ defaultOptions: { queries: {
-      retry: false,
-      staleTime: Infinity,
-    } } });
-    client.setQueryData(queryKeys.environments.list("company-1"), [
-      { id: "local-env", name: "Local", driver: "local", status: "active", config: {} },
-    ]);
-    client.setQueryData(queryKeys.environments.capabilities("company-1"), {});
-    client.setQueryData(queryKeys.instance.settings, { defaultEnvironmentId: "local-env" });
-    client.setQueryData(queryKeys.instance.generalSettings, {});
-    client.setQueryData(queryKeys.health, { deploymentMode: "authenticated", localAiLoginSupported: false });
-    await render(client, false, taskRepair ? <ConnectionSetupFlow host="dialog" serviceSlug="anthropic" interactionId="ai-intent" requestedAgentId="agent-1" aiConnection={{ provider: "anthropic", method: "subscription", mode: "responsible_user" }} /> : undefined);
-    await passAccessStep();
-    expect(container.textContent).toContain("Connection name");
-    expect(container.textContent).not.toContain("How do you want to connect?");
-    expect(radioContaining("Use an API key")).toBeUndefined();
-    expect(container.querySelector('[role="alert"]')).toBeNull();
-    await act(async () => buttonContaining("Use API key instead")!.click());
-    await act(async () => buttonContaining("Claude")!.click());
-    await flushReact();
-    const key = container.querySelector<HTMLInputElement>('input[type="password"]');
-    expect(key).toBeTruthy();
-    await act(async () => setInputValue(key!, "fixture-anthropic-ai-key"));
-    await act(async () => buttonByText("Connect")!.click());
-    await flushReact();
-    expect(createAiAccount).toHaveBeenCalledWith("company-1", expect.objectContaining({
-      provider: "anthropic", method: "api_key", apiKey: "fixture-anthropic-ai-key",
-    }));
-    if (!taskRepair) expect(mockNavigate).toHaveBeenCalledWith("/apps/anthropic-ai-account/permissions");
-    expect(connectAppMock).not.toHaveBeenCalled();
-    expect(container.textContent).not.toContain("Connect for tool access instead");
-  });
-
-  it.each([false, true])("opens Copilot with visible personal defaults and shares only by explicit choice (%s)", async (share) => {
-    mockSearch.value = "source=github&method=copilot-token";
-    listGalleryMock.mockResolvedValue({ apps: [GITHUB] });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-    client.setQueryData(queryKeys.environments.list("company-1"), [
-      { id: "local-env", name: "Local", driver: "local", status: "active", config: {} },
-    ]);
-    client.setQueryData(queryKeys.instance.settings, { defaultEnvironmentId: "local-env" });
-    const createAiAccount = vi.spyOn(aiConnectionsApi, "create").mockResolvedValue({
-      connectionId: "copilot-ai-account", grantId: "copilot-ai-grant",
-    });
-    await render(client);
-    await passAccessStep();
-    expect(container.textContent).toContain("personal fine-grained token with Copilot Requests permission");
-    expect(container.querySelector('input[placeholder="github_pat_..."]')).toBeTruthy();
-    expect(container.querySelector('[aria-label="Copilot execution environment"]')).toBeTruthy();
-    expect(container.textContent).not.toContain("You must connect this instance to Paperclip");
-    expect(getCloudConnectorEnrollmentMock).not.toHaveBeenCalled();
-    expect(startOAuthMock).not.toHaveBeenCalled();
-    expect(connectAppMock).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("Connects as you");
-    expect(container.textContent?.match(/Connects as you/g)).toHaveLength(1);
-    expect(container.textContent).toContain("Connect GitHub Copilot");
-    await openAccessAdvanced();
-    expect(radioContaining("My GitHub account")?.getAttribute("aria-checked")).toBe("true");
-    expect(radioContaining("Only agents I choose")?.getAttribute("aria-checked")).toBe("true");
-    expect(radioContaining("Any agent")?.getAttribute("aria-checked")).toBe("false");
-    if (share) {
-      await act(async () => radioContaining("Shared organization GitHub account")!.click());
-      await act(async () => radioContaining("Any agent")!.click());
-    }
-    const key = container.querySelector<HTMLInputElement>('input[type="password"]')!;
-    await act(async () => setInputValue(key, "fixture-copilot-token"));
-    await act(async () => buttonByText("Connect")!.click());
-    await flushReact();
-    expect(createAiAccount).toHaveBeenCalledWith("company-1", expect.objectContaining({
-      provider: "github", method: "api_key", apiKey: "fixture-copilot-token",
-      ownership: share ? "shared" : "personal", allAgents: share, agentIds: [],
-      environmentId: "local-env",
-    }));
-    expect(mockNavigate).toHaveBeenCalledWith("/apps/copilot-ai-account/permissions");
-  });
 
   it("states the GitHub identity default and keeps its controls one click away", async () => {
     mockParams.appKey = "github";

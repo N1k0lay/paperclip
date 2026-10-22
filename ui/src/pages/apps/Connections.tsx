@@ -1,4 +1,4 @@
-import { isRetiredComposioConnection, RETIRED_COMPOSIO_MESSAGE } from "@paperclipai/shared";
+import { getAppStoreDefinition, isRetiredComposioConnection, RETIRED_COMPOSIO_MESSAGE } from "@paperclipai/shared";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppWindow, Cloud, Loader2, ShieldAlert, ShieldCheck, ShieldQuestion, Trash2 } from "lucide-react";
@@ -226,10 +226,11 @@ export function Connections() {
   }, [profilesQuery.data]);
 
   const connections = (connectionsQuery.data?.connections ?? []).filter(
-    (c) => c.status !== "archived",
+    (c) => c.status !== "archived" && c.connectionPurpose !== "ai",
   );
   const applications = (applicationsQuery.data?.applications ?? []).filter(
-    (application) => application.status !== "archived",
+    (application) => application.status !== "archived" && application.metadata?.purpose !== "ai"
+      && !getAppStoreDefinition(appApplicationSourceSlug(application) ?? "")?.methods.every(method => method.purpose === "ai"),
   );
   const connectionsByApplication = useMemo(() => {
     const map = new Map<string, ToolConnection[]>();

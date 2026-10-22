@@ -1,11 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { preparePiRuntimeConfig } from "./runtime-config.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { preparePiRuntimeConfig, resolvePiLocalProvider } from "./runtime-config.js";
 
 const cleanupPaths = new Set<string>();
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await Promise.all(
     [...cleanupPaths].map(async (filepath) => {
       await fs.rm(filepath, { recursive: true, force: true });
@@ -22,6 +23,61 @@ async function readModelsJson(agentConfigDir: string): Promise<Record<string, un
 }
 
 describe("preparePiRuntimeConfig", () => {
+  it("routes a per-agent model without persisting its secret or ambient provider credentials", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "host-owner-secret");
+    vi.stubEnv("PAPERCLIP_PI_PROVIDERS", JSON.stringify({ unwanted: { apiKey: "ambient-secret" } }));
+    const apiKey = "!this-is-a-literal-key-not-a-shell-command";
+    const prepared = await preparePiRuntimeConfig({
+      config: { baseUrl: "http://localhost:11434/v1/", model: "local/vendor/model:latest" },
+      env: { OPENAI_API_KEY: apiKey },
+    });
+    cleanupPaths.add(prepared.agentConfigDir!);
+    expect(await readModelsJson(prepared.agentConfigDir!)).toEqual({ providers: {
+      local: {
+        baseUrl: "http://localhost:11434/v1", api: "openai-completions",
+        apiKey: "PAPERCLIP_PI_LOCAL_API_KEY", models: [{ id: "vendor/model:latest" }],
+      },
+    } });
+    expect(prepared.env.PAPERCLIP_PI_LOCAL_API_KEY).toBe(apiKey);
+    expect(prepared.env.PI_OFFLINE).toBe("1");
+    expect(JSON.stringify(await readModelsJson(prepared.agentConfigDir!))).not.toContain(apiKey);
+    expect(prepared.notes.join(" ")).not.toContain(apiKey);
+    expect((await fs.stat(path.join(prepared.agentConfigDir!, "models.json"))).mode & 0o777).toBe(0o600);
+    await prepared.cleanup();
+    await expect(fs.access(prepared.agentConfigDir!)).rejects.toThrow();
+  });
+
+  it("supports a local endpoint without a key and never uses the host's OPENAI_API_KEY", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "host-owner-secret");
+    const prepared = await preparePiRuntimeConfig({
+      config: { baseUrl: "http://127.0.0.1:8080/v1", model: "qwen3:8b" }, env: {},
+    });
+    cleanupPaths.add(prepared.agentConfigDir!);
+    expect(prepared.env.PAPERCLIP_PI_LOCAL_API_KEY).toBe("paperclip-local-no-auth");
+    expect(resolvePiLocalProvider({ baseUrl: "http://127.0.0.1:8080/v1", model: "qwen3:8b" })?.modelId).toBe("qwen3:8b");
+  });
+
+  it.each([
+    "file:///tmp/models", "ftp://localhost/v1", "not a url", "http://user:password@localhost/v1",
+    "http://localhost/v1?api_key=secret", "http://localhost/v1#secret", 123,
+  ])("rejects invalid endpoint configuration without quoting potentially secret values: %s", async (baseUrl) => {
+    await expect(preparePiRuntimeConfig({ config: { baseUrl, model: "local/model" }, env: {} })).rejects.toThrow(/URL API/);
+    try {
+      resolvePiLocalProvider({ baseUrl, model: "local/model" });
+    } catch (err) {
+      expect(String(err)).not.toContain("password");
+      expect(String(err)).not.toContain("api_key=secret");
+    }
+  });
+
+  it("requires an explicit model for a custom endpoint", async () => {
+    await expect(preparePiRuntimeConfig({ config: { baseUrl: "http://localhost/v1", model: "local/" }, env: {} })).rejects.toThrow("идентификатор модели");
+  });
+
+  it("rejects arguments that could override the configured provider", () => {
+    expect(() => resolvePiLocalProvider({ baseUrl: "http://localhost:11434/v1", model: "local/qwen", extraArgs: ["--provider", "openai"] })).toThrow(/аргументы/);
+  });
+
   it("attributes OpenRouter aliases and model overrides while preserving routing and other providers", async () => {
     const other = { baseUrl: "https://other.example/v1", headers: { "X-Title": "Other" } };
     const prepared = await preparePiRuntimeConfig({ env: { PAPERCLIP_PI_PROVIDERS: JSON.stringify({

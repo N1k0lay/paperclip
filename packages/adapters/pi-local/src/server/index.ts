@@ -59,3 +59,4 @@ export {
   resetPiModelsCacheForTests,
 } from "./models.js";
 export { parsePiJsonl, isPiUnknownSessionError } from "./parse.js";
+export { resolvePiLocalProvider } from "./runtime-config.js";

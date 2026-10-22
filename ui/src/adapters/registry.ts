@@ -268,5 +268,6 @@ export function syncExternalAdapters(
 }
 
 export function listUIAdapters(): UIAdapterModule[] {
-  return [...uiAdapters];
+  // Keep historical log parsers available through getUIAdapter, but expose only the local runtime.
+  return uiAdapters.filter(adapter => adapter.type === "pi_local");
 }

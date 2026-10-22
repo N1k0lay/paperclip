@@ -10,6 +10,12 @@ export const PROVIDER_ENV_KEYS: Record<string, string> = {
   opencode: "OPENCODE_API_KEY",
 };
 
+/** Provider credentials never follow an agent to a different API endpoint. */
+export const PROVIDER_CREDENTIAL_ENV_KEYS = [
+  ...Object.values(PROVIDER_ENV_KEYS), "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_AUTH_TOKEN",
+  "OPENAI_ACCESS_TOKEN", "OPENAI_REFRESH_TOKEN", "GITHUB_COPILOT_TOKEN", "COPILOT_GITHUB_TOKEN",
+];
+
 /** New organization credentials get a distinct key; never rotate another agent's secret. */
 export async function storeOrganizationApiKey(
   companyId: string,

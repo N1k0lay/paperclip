@@ -19,7 +19,7 @@ export function OnboardingWizardVariant() {
     setOnboardingRouteDismissed(false);
   }, [pathname, setOnboardingRouteDismissed]);
   const requested = onboardingOpen || (isOnboardingPath(pathname) && !onboardingRouteDismissed);
-  return <DeferredOverlay requested={requested} title="Setup" onClose={() => {
+  return <DeferredOverlay requested={requested} title="Настройка" onClose={() => {
     closeOnboarding();
     if (isOnboardingPath(pathname)) setOnboardingRouteDismissed(true);
   }}><OnboardingWizard /></DeferredOverlay>;

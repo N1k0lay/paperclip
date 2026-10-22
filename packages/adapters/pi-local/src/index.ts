@@ -25,9 +25,10 @@ Core fields:
 - instructionsFilePath (string, optional): absolute path to a markdown instructions file appended to system prompt via --append-system-prompt
 - promptTemplate (string, optional): user prompt template passed via -p flag
 - model (string, required): Pi model id in provider/model format (for example xai/grok-4)
+- baseUrl (string, optional): absolute HTTP(S) OpenAI-compatible API base URL, for example http://localhost:11434/v1. When set, model uses local/<model-id>; raw model IDs are also accepted. No vendor model discovery or account is required.
 - thinking (string, optional): thinking level (off, minimal, low, medium, high, xhigh)
 - command (string, optional): defaults to "pi"
-- env (object, optional): KEY=VALUE environment variables
+- env (object, optional): KEY=VALUE environment variables. For baseUrl, bind OPENAI_API_KEY to a Paperclip secret when authentication is needed. Leave it unset for a local server without authentication; ambient server credentials are not used.
 
 Operational fields:
 - timeoutSec (number, optional): run timeout in seconds

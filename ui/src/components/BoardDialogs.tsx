@@ -11,9 +11,9 @@ export function BoardDialogs() {
   const { newIssueOpen, newProjectOpen, newGoalOpen, newAgentOpen } = useDialogState();
   const { closeNewIssue, closeNewProject, closeNewGoal, closeNewAgent } = useDialogActions();
   return <>
-    <DeferredOverlay requested={newIssueOpen} title="New task" onClose={closeNewIssue}><NewIssueDialog /></DeferredOverlay>
-    <DeferredOverlay requested={newProjectOpen} title="New project" onClose={closeNewProject}><NewProjectDialog /></DeferredOverlay>
-    <DeferredOverlay requested={newGoalOpen} title="New goal" onClose={closeNewGoal}><NewGoalDialog /></DeferredOverlay>
-    <DeferredOverlay requested={newAgentOpen} title="New agent" onClose={closeNewAgent}><NewAgentDialog /></DeferredOverlay>
+    <DeferredOverlay requested={newIssueOpen} title="Новая задача" onClose={closeNewIssue}><NewIssueDialog /></DeferredOverlay>
+    <DeferredOverlay requested={newProjectOpen} title="Новый проект" onClose={closeNewProject}><NewProjectDialog /></DeferredOverlay>
+    <DeferredOverlay requested={newGoalOpen} title="Новая цель" onClose={closeNewGoal}><NewGoalDialog /></DeferredOverlay>
+    <DeferredOverlay requested={newAgentOpen} title="Новый агент" onClose={closeNewAgent}><NewAgentDialog /></DeferredOverlay>
   </>;
 }

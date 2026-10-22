@@ -1,0 +1,27 @@
+services:
+  skaz:
+    environment:
+      DATABASE_URL: postgresql://skaz:${SKAZ_POSTGRES_PASSWORD:?Set SKAZ_POSTGRES_PASSWORD in skaz.env}@postgres:5432/skaz
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: ${SKAZ_POSTGRES_IMAGE:-postgres:16-alpine}
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: skaz
+      POSTGRES_DB: skaz
+      POSTGRES_PASSWORD: ${SKAZ_POSTGRES_PASSWORD:?Set SKAZ_POSTGRES_PASSWORD in skaz.env}
+    volumes:
+      - skaz-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skaz -d skaz"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 12
+
+volumes:
+  skaz-postgres:

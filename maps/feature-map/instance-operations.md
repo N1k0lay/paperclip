@@ -27,6 +27,8 @@ Agent access: [companion](../agent-access-map/instance-operations.md).
 
 Use `paperclipai install`, `run`, `service`, `doctor`, `configure`, `channels`, or `update --help` for the intended operation.
 
+Onboarding configures instance infrastructure. Set the local or corporate model API URL, model ID, and optional key in the web agent wizard. The legacy `configure --section llm` entry shows this guidance and preserves the saved configuration.
+
 ### `settings-backup`
 
 Use currently visible instance settings for experiments/access and `paperclipai db:backup --help` for one-off backup. Some legacy general-settings URLs redirect.
@@ -42,6 +44,8 @@ Preconditions: follow the [baseline](./README.md#before-driving-a-journey). Use 
 ### `operator-cli`
 
 Automated: [doctor](../../cli/src/__tests__/doctor.test.ts), [update command](../../cli/src/__tests__/update-command.test.ts), and [service manager](../../cli/src/__tests__/service-manager.test.ts) cover command contracts.
+
+[Onboarding](../../cli/src/__tests__/onboard.test.ts) and [configuration](../../cli/src/__tests__/configure.test.ts) cover setup without cloud model prompts or probes and preservation of existing credentials.
 
 Manual: Inspect the selected installation/channel and configuration, start the isolated instance, confirm health and browser access, then stop that instance. For update changes, use the dry-run/check path first and verify installed version and rollback state on an owned disposable installation.
 

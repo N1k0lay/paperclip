@@ -7,6 +7,11 @@ import {
 } from "../services/instance-settings.js";
 
 describe("instance settings service", () => {
+  it("keeps the optional Rust runner off until explicitly enabled", () => {
+    expect(normalizeExperimentalSettings({}).enableNativeRunner).toBe(false);
+    expect(normalizeExperimentalSettings(null).enableNativeRunner).toBe(false);
+    expect(normalizeExperimentalSettings({ enableNativeRunner: true }).enableNativeRunner).toBe(true);
+  });
   it("keeps Notebook off for legacy or invalid settings and round-trips explicit operator choices", () => {
     for (const stored of [undefined, null, {}, { enableApps: true },
       { enablePaperclipNotebook: "true" }, { enablePaperclipNotebook: 1 },

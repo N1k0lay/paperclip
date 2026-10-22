@@ -3,9 +3,7 @@ import type { AgentRunner, AgentRunnerChoice } from "@paperclipai/shared";
 import { needsClaudeSetupQualification, qualifyClaudeSetup } from "../lib/qualify-claude-setup";
 import { agentHarnessType } from "@paperclipai/shared";
 import { adaptersApi, type AdapterInfo } from "../api/adapters";
-import { AgentRunnerSelect } from "./AgentRunnerSelect";
 import { healthApi } from "@/api/health";
-import { LocalProviderLoginInstructions } from "./AdapterLoginChrome";
 import { useLocalAiLogin } from "./ai-connections/useLocalAiLogin";
 import { aiConnectionsApi } from "@/api/ai-connections";
 import { AiConnectionField, aiProviderForAdapter } from "./ai-connections/AiConnectionField";
@@ -13,11 +11,11 @@ import { PAPERCLIP_RUNNER_ACPX_PROFILES } from "@paperclipai/adapter-utils";
 import { aiConnectionBindingSchema } from "@paperclipai/shared";
 import type { AiConnectionBinding } from "@paperclipai/shared";
 import { storeProviderApiKey } from "../lib/provider-credential";
-import { SavedProviderKeySelect, useSavedProviderKeys } from "./onboarding/SavedProviderKeySelect";
+import { useSavedProviderKeys } from "./onboarding/SavedProviderKeySelect";
 import { randomAgentAppearance, resolveAgentAppearance, agentAppearanceSchema } from "@paperclipai/shared";
 import { OnboardingCharacter } from "./onboarding/OnboardingCharacter";
 import { useEffect, useState, useMemo, useRef } from "react";
-import type { ComponentType, CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import type {
@@ -136,8 +134,8 @@ import {
   onboardingStepPositionFor,
 } from "./onboarding/Stepper";
 import { AgentPreview } from "./onboarding/AgentPreview";
-import { ModelSourceTiles, type CredentialMode } from "./onboarding/ModelSourceTiles";
-import { CredentialModeLink } from "./onboarding/CredentialModeLink";
+import type { CredentialMode } from "./onboarding/ModelSourceTiles";
+import { PaperclipLockup } from "./PaperclipLockup";
 import { FooterNav, type FooterPrimaryIcon } from "./onboarding/FooterNav";
 import { OnboardingHeading } from "./onboarding/OnboardingPrimitives";
 import { DEFAULT_AGENT_ROLE } from "../lib/onboarding-agent-role";
@@ -168,14 +166,6 @@ const copilotOnboardingQualified = PAPERCLIP_RUNNER_ACPX_PROFILES.some(
   (profile) => profile.value === "copilot" && profile.qualified,
 );
 
-function restoreOnboardingAdapterType(savedAdapterType: unknown, provider?: unknown, savedCopilot?: unknown): AdapterType {
-  if (savedAdapterType === "paperclip_runner" && provider === "pi") return "pi_local";
-  if (savedAdapterType === "paperclip_runner" && provider === "opencode") return "opencode_local";
-  if (savedAdapterType === "paperclip_runner" && savedCopilot !== true && (provider === undefined || provider === "codex")) return "codex_local";
-  return typeof savedAdapterType === "string" && (savedAdapterType !== "paperclip_runner" || (savedCopilot === true && copilotOnboardingQualified))
-    ? savedAdapterType
-    : "claude_local";
-}
 
 /**
  * True when an adapter-test result blocks a hire. A `fail` status always
@@ -216,46 +206,6 @@ function adapterConfigHasAnthropicApiKey(config: Record<string, unknown>): boole
 }
 
 /**
- * Full-colour brand marks for the sources this step offers.
- *
- * The registry's own icons are monochrome, drawn to sit in dense config UI
- * where a row of saturated logos would be noise. This step is the opposite
- * case: two large tiles carrying the whole choice, where the brand is the
- * fastest thing to recognise.
- *
- * Keyed by adapter type with a fallback, so the row stays registry-driven. An
- * adapter with no brand file here still renders — with its registry icon —
- * rather than a gap where a tile should be.
- */
-const MODEL_SOURCE_BRAND_MARKS: Record<string, string> = {
-  claude_local: "/brands/claude-color.svg",
-};
-
-
-/**
- * OpenAI's blossom, inline rather than served from `/brands`.
- *
- * The supplied asset is a white fill, which was fine while this row only ever
- * sat on a dark tile. It follows the reader's system setting now, and white on
- * the light tile is invisible. Inlining lets the path take
- * `currentColor` and be legible in both, which an `<img>` cannot do.
- */
-function OpenAiBlossom({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 716 716" className={className} fill="none" aria-hidden>
-      <path
-        fill="currentColor"
-        d="M508.749 317.399C516.777 287.314 508.991 253.884 485.389 230.282C461.788 206.681 428.36 198.895 398.273 206.923C376.231 184.928 343.39 174.956 311.148 183.596C278.906 192.234 255.45 217.292 247.36 247.361C217.291 255.451 192.233 278.91 183.595 311.149C174.957 343.391 184.927 376.232 206.924 398.274C198.896 428.359 206.683 461.789 230.284 485.391C253.885 508.992 287.313 516.779 317.401 508.75C339.442 530.745 372.286 540.717 404.525 532.079C436.767 523.441 460.223 498.384 468.313 468.315C498.383 460.224 523.44 436.766 532.078 404.526C540.716 372.285 530.747 339.443 508.749 317.402V317.399ZM470.899 244.776C486.892 260.77 493.488 282.601 490.687 303.412L415.577 260.046C412.411 258.218 408.509 258.218 405.345 260.046L317.401 310.82V277.526C317.401 275.191 318.652 273.005 320.676 271.837L387.644 233.174C414.178 218.353 448.346 222.223 470.901 244.776H470.899ZM357.837 311.144L398.275 334.491V381.185L357.837 404.532L317.398 381.185V334.491L357.837 311.144ZM264.776 269.693C265.207 239.305 285.644 211.649 316.453 203.393C338.3 197.54 360.505 202.744 377.127 215.573L302.014 258.937C298.848 260.764 296.898 264.144 296.898 267.798V369.346L268.065 352.699C266.043 351.531 264.776 349.353 264.776 347.017V269.691V269.693ZM203.391 316.454C209.244 294.608 224.854 277.978 244.276 269.999V356.73C244.276 360.384 246.226 363.763 249.392 365.591L337.337 416.365L308.503 433.013C306.481 434.181 303.961 434.188 301.939 433.02L234.971 394.357C208.868 378.789 195.138 347.261 203.391 316.454ZM244.775 470.9C228.781 454.906 222.186 433.075 224.986 412.264L300.096 455.63C303.263 457.457 307.164 457.457 310.328 455.63L398.273 404.856V438.149C398.273 440.485 397.022 442.671 394.997 443.839L328.029 482.502C301.495 497.322 267.327 493.452 244.772 470.9H244.775ZM450.897 445.982C450.466 476.371 430.029 504.027 399.22 512.283C377.373 518.136 355.168 512.932 338.547 500.102L413.659 456.738C416.826 454.911 418.775 451.532 418.775 447.877V346.329L447.609 362.977C449.631 364.145 450.897 366.323 450.897 368.659V445.985V445.982ZM512.282 399.221C506.429 421.068 490.819 437.697 471.397 445.676V358.946C471.397 355.292 469.448 351.912 466.281 350.085L378.336 299.311L407.17 282.663C409.192 281.495 411.712 281.487 413.734 282.655L480.702 321.318C506.805 336.887 520.536 368.415 512.282 399.221Z"
-      />
-    </svg>
-  );
-}
-
-const MODEL_SOURCE_INLINE_MARKS: Record<string, ComponentType<{ className?: string }>> = {
-  codex_local: OpenAiBlossom,
-};
-
-/**
  * The environment variable each source reads its key from.
  *
  * Named rather than described in the field above it, because the customer knows
@@ -266,6 +216,7 @@ const MODEL_SOURCE_INLINE_MARKS: Record<string, ComponentType<{ className?: stri
 const API_KEY_ENV_KEYS: Record<string, string> = {
   claude_local: ANTHROPIC_API_KEY_ENV_KEY,
   codex_local: "OPENAI_API_KEY",
+  pi_local: "OPENAI_API_KEY",
   paperclip_runner: "COPILOT_GITHUB_TOKEN",
 };
 
@@ -273,24 +224,10 @@ function apiKeyEnvKeyFor(adapterType: string): string {
   return API_KEY_ENV_KEYS[adapterType] ?? "API_KEY";
 }
 
-function ModelSourceMark({
-  type,
-  Fallback,
-}: {
-  type: string;
-  Fallback: ComponentType<{ className?: string }>;
-}) {
-  const Inline = MODEL_SOURCE_INLINE_MARKS[type];
-  if (Inline) return <Inline className="size-full" />;
-  const brand = MODEL_SOURCE_BRAND_MARKS[type];
-  if (!brand) return <Fallback className="size-full" />;
-  return <img src={brand} alt="" className="size-full" />;
-}
-
 // Exported so tests write/read the exact key the component uses, instead of
 // duplicating the literal and silently drifting from it if it's ever renamed.
 export const ONBOARDING_STORAGE_KEY = "paperclip-onboarding-state";
-const DEFAULT_TASK_TITLE = "Paperclip onboarding";
+const DEFAULT_TASK_TITLE = "Знакомство со Сказом";
 /**
  * The onboarding draft in `localStorage`, via a browser that is allowed to say
  * no.
@@ -333,7 +270,7 @@ const onboardingDraftStorage = {
 };
 
 const INCOMPLETE_ONBOARDING_STATE_MESSAGE =
-  "Onboarding state is incomplete. Please restart onboarding and try again.";
+  "Настройка не завершена. Откройте её заново и повторите попытку.";
 
 /**
  * Thin gate in front of {@link OnboardingWizardInner}. The inner component's
@@ -609,11 +546,10 @@ function OnboardingWizardInner({
     // one.
     (saved?.agentRole as AgentRole) || DEFAULT_AGENT_ROLE,
   );
-  const [adapterType, setAdapterType] = useState<AdapterType>(() =>
-    restoreOnboardingAdapterType(saved?.adapterType, saved?.runnerProvider, saved?.onboardingCopilot),
-  );
-  const [runner, setRunner] = useState<AgentRunnerChoice>(() => saved?.runner === "legacy" || saved?.runner === "paperclip"
-    ? saved.runner : saved?.adapterType === "paperclip_runner" && (saved?.runnerProvider === undefined || ["codex", "claude", "acpx", "opencode", "pi"].includes(String(saved?.runnerProvider))) ? "paperclip" : "auto");
+  const [adapterType] = useState<AdapterType>("pi_local");
+  const isLocalApi = adapterType === "pi_local";
+  const [localBaseUrl, setLocalBaseUrl] = useState((saved?.localBaseUrl as string) ?? "");
+  const [runner, setRunner] = useState<AgentRunnerChoice>("legacy");
   /**
    * Whether a model source has been chosen, as opposed to which one
    * `adapterType` happens to hold.
@@ -642,15 +578,9 @@ function OnboardingWizardInner({
   const [copilotConnection, setCopilotConnection] = useState<AiConnectionBinding>();
   const savedNativeRunnerDraft = saved?.adapterType === "paperclip_runner" && !(saved?.onboardingCopilot === true && copilotOnboardingQualified);
   const [cwd, setCwd] = useState((saved?.cwd as string) ?? "");
-  const [model, setModel] = useState(
-    savedNativeRunnerDraft && saved?.runnerProvider !== undefined && !["codex", "claude", "acpx", "opencode", "pi"].includes(String(saved.runnerProvider)) ? "" : (saved?.model as string) ?? "",
-  );
-  const [command, setCommand] = useState(
-    saved?.adapterType === "paperclip_runner" ? "" : (saved?.command as string) ?? "",
-  );
-  const [args, setArgs] = useState(
-    saved?.adapterType === "paperclip_runner" ? "" : (saved?.args as string) ?? "",
-  );
+  const [model, setModel] = useState((saved?.model as string) ?? "");
+  const [command, setCommand] = useState("");
+  const [args, setArgs] = useState("");
   const [url, setUrl] = useState(
     saved?.adapterType === "paperclip_runner" ? "" : (saved?.url as string) ?? "",
   );
@@ -715,7 +645,7 @@ function OnboardingWizardInner({
   const savedKeys = useSavedProviderKeys(
     createdCompanyId,
     apiKeyEnvKeyFor(adapterType),
-    effectiveOnboardingOpen && step === 4,
+    !isLocalApi && effectiveOnboardingOpen && step === 4,
   );
   // The chooser is absent in onboarding. Prefer the user's explicit default;
   // otherwise only reuse an unambiguous account, regardless of list ordering.
@@ -725,8 +655,8 @@ function OnboardingWizardInner({
   const selectedApiKeyId = selectedSavedKey?.companyId === createdCompanyId && selectedSavedKey?.envKey === apiKeyEnvKeyFor(adapterType)
     ? selectedSavedKey.id
     : savedKeys.options[0]?.id;
-  const selectedApiKey = savedKeys.options.find((option) => option.id === selectedApiKeyId);
-  const credentialMode = isCopilot ? "api" : credentialModeChoice ?? (
+  const selectedApiKey = isLocalApi ? undefined : savedKeys.options.find((option) => option.id === selectedApiKeyId);
+  const credentialMode = isCopilot || isLocalApi ? "api" : credentialModeChoice ?? (
     (savedKeys.subscriptions.length > 0 || (adapterType === "claude_local" && savedKeys.storedLogin.data))
       ? "subscription" : savedKeys.options.length || adapterType === "opencode_local" ? "api" : "subscription"
   );
@@ -786,9 +716,10 @@ function OnboardingWizardInner({
    */
   const apiKeySecretRef = useRef<{ key: string; companyId: string; envKey: string; binding?: Awaited<ReturnType<typeof storeProviderApiKey>>["binding"]; aiConnection?: AiConnectionBinding } | null>(null);
   const managedSubscriptionRef = useRef<{ companyId: string; binding: AiConnectionBinding } | null>(null);
-  const managedProvider = aiProviderForAdapter(isCopilot ? "copilot_runtime" : adapterType);
+  const managedProvider = isLocalApi ? undefined : aiProviderForAdapter(isCopilot ? "copilot_runtime" : adapterType);
   const managedSubscriptionProvider = managedProvider === "anthropic" || managedProvider === "openai" || managedProvider === "xai" ? managedProvider : undefined;
   function managedBindingForStep(): AiConnectionBinding | undefined {
+    if (isLocalApi) return undefined;
     if (isCopilot) return copilotConnection;
     const restoredBinding = restoredSetup?.companyId === createdCompanyId
       && agentHarnessType(restoredSetup.adapterType, restoredSetup.adapterConfig) === agentHarnessType(adapterType, {})
@@ -950,7 +881,7 @@ function OnboardingWizardInner({
     if (!effectiveOnboardingOpen) return;
     const state = {
       step, companyName,
-      agentName, agentAppearance, agentRole, adapterType, runner, cwd, model, command, args, url,
+      agentName, agentAppearance, agentRole, adapterType, runner, cwd, model, command, args, url, localBaseUrl,
       onboardingCopilot: isCopilot,
       // The mode, never the key: this blob is localStorage.
       credentialMode, credentialModeChoice,
@@ -960,7 +891,7 @@ function OnboardingWizardInner({
     onboardingDraftStorage.write(JSON.stringify(state));
   }, [
     effectiveOnboardingOpen, step, companyName,
-    agentName, agentAppearance, agentRole, adapterType, runner, cwd, model, command, args, url,
+    agentName, agentAppearance, agentRole, adapterType, runner, cwd, model, command, args, url, localBaseUrl,
     credentialMode, credentialModeChoice,
     createdCompanyId, createdCompanyPrefix, createdAgentId, setupAgentId,
     createdCompanyGoalId, createdProjectId, createdIssueRef,
@@ -1040,7 +971,7 @@ function OnboardingWizardInner({
       ...(isCopilot ? { provider: "acpx", acpxAgent: "copilot", aiConnection: copilotConnection } : {}),
     }),
     ...(isCopilot ? COPILOT_MODEL_DISCOVERY_QUERY_OPTIONS : {}),
-    enabled: Boolean(createdCompanyId) && effectiveOnboardingOpen && step === 4 && (!isCopilot || Boolean(copilotConnection && copilotEnvironmentReady)),
+    enabled: !isLocalApi && Boolean(createdCompanyId) && effectiveOnboardingOpen && step === 4 && (!isCopilot || Boolean(copilotConnection && copilotEnvironmentReady)),
     retry: false,
   });
   const requestCopilotModels = Boolean(isCopilot && createdCompanyId && effectiveOnboardingOpen && step === 4 && copilotConnection && copilotEnvironmentReady);
@@ -1095,7 +1026,7 @@ function OnboardingWizardInner({
     autoConnectStartedRef.current = true;
     setLoading(false);
     setAdapterEnvLoading(false);
-    setError("Configuration changed during setup. Connect again to test the current settings.");
+    setError("Настройки изменились. Проверьте подключение ещё раз.");
   }, [claudeSetupSelectionKey]);
   const adapterSetupSelectionRef = useRef("");
   const adapterEnvErrorSelectionRef = useRef<string | null>(null);
@@ -1148,7 +1079,7 @@ function OnboardingWizardInner({
     return () => { connectAttemptRef.current++; };
   }, [effectiveOnboardingOpen, createdCompanyId, adapterType, credentialMode, step]);
 
-  const canShowAdapterLogin = Boolean(
+  const canShowAdapterLogin = !isLocalApi && Boolean(
     adapterCaps.login != null &&
       resolvedLoginEnvironment?.driver === "sandbox" &&
       resolvedLoginEnvironmentId &&
@@ -1253,13 +1184,13 @@ function OnboardingWizardInner({
         !disabledTypes.has(a.type) &&
         isVisualAdapterChoice(a.type)
       )
-      .map((a) => ({ ...getAdapterDisplay(a.type), type: a.type }));
+      .map((a) => ({ ...getAdapterDisplay(a.type), type: a.type, ...(a.type === "pi_local" ? { recommended: true, label: "Локальный / корпоративный API" } : {}) }));
 
     const copilot = copilotOnboardingEnabled && !disabledTypes.has("paperclip_runner") && listUIAdapters().some((a) => a.type === "paperclip_runner")
       ? [{ ...getAdapterDisplay("copilot_runtime"), type: "paperclip_runner", label: "GitHub Copilot", recommended: true }]
       : [];
     return {
-      recommendedAdapters: [...all.filter((a) => a.recommended), ...copilot],
+      recommendedAdapters: [...all.filter((a) => a.recommended).sort((a, b) => Number(b.type === "pi_local") - Number(a.type === "pi_local")), ...copilot],
       moreAdapters: all.filter((a) => !a.recommended),
     };
   }, [disabledTypes, copilotOnboardingEnabled]);
@@ -1269,8 +1200,7 @@ function OnboardingWizardInner({
    * `adapterType` alone, because a restored draft can name an adapter this step
    * no longer offers — a selection the customer cannot see.
    */
-  const sourceSelected =
-    sourcePicked && recommendedAdapters.some((opt) => opt.type === adapterType);
+  const sourceSelected = adapterRegistryLoaded && !disabledTypes.has("pi_local");
 
   /**
    * Whether the connect step may advance.
@@ -1292,17 +1222,21 @@ function OnboardingWizardInner({
   const restoredApiCredential = restoredSetup?.companyId === createdCompanyId
     && agentHarnessType(restoredSetup.adapterType, restoredSetup.adapterConfig) === agentHarnessType(adapterType, isCopilot ? { provider: "acpx", acpxAgent: "copilot" } : {})
     && !selectedSavedKey && (restoredSetup.adapterConfig.env as Record<string, unknown> | undefined)?.[apiKeyEnvKeyFor(adapterType)];
-  const connectStepReady = Boolean(setupPrepared || createdAgentId) && sourceSelected && !adapterEnvLoading && !savedKeys.loading && runnerDiscoveryReady && (!isCopilot || copilotModelReady);
+  const connectStepReady = Boolean(setupPrepared || createdAgentId) && sourceSelected && !adapterEnvLoading && (isLocalApi || !savedKeys.loading) && runnerDiscoveryReady && (!isCopilot || copilotModelReady);
 
   useEffect(() => {
     if (step !== 4 || !createdCompanyId || !agentName.trim() || !adapterRegistryLoaded
-      || createdAgentId || setupPrepared || preparingSetup.current.has(createdCompanyId) || setupError
+      || !sourceSelected || createdAgentId || setupPrepared || preparingSetup.current.has(createdCompanyId) || setupError
       || (!sourceSelected && setupNameConflict === JSON.stringify([createdCompanyId, agentName.trim().toLowerCase()]))) return;
     const companyId = createdCompanyId;
     preparingSetup.current.add(companyId);
     const id = setupAgentId ?? crypto.randomUUID();
     let restoring = Boolean(setupAgentId);
     void (async () => {
+      if (setupAgentId) {
+        try { return await agentsApi.get(setupAgentId, companyId); }
+        catch (cause) { if (!(cause instanceof ApiError) || cause.status !== 404) throw cause; }
+      }
       if (!setupAgentId) {
         // Only a persisted setup ID identifies an unfinished record for reuse.
         const sameName = (await agentsApi.list(companyId)).filter(agent =>
@@ -1335,24 +1269,31 @@ function OnboardingWizardInner({
         setSetupAgentId(agent.id);
         if (!restoring && agent.name) setAgentName(current => current.trim() === agentName.trim() ? agent.name : current);
         if (restoring && agent.adapterConfig) {
-          setRestoredSetup(agent);
-          setAgentName(agent.name);
+          const prior = agent.adapterConfig;
+          const localConfig = agent.adapterType === "pi_local" ? prior : {
+            ...(prior.cwd ? { cwd: prior.cwd } : {}),
+            ...(prior.instructionsFilePath ? { instructionsFilePath: prior.instructionsFilePath } : {}),
+            ...(typeof prior.baseUrl === "string" ? { baseUrl: prior.baseUrl,
+              env: (prior.env as Record<string, unknown> | undefined)?.OPENAI_API_KEY
+                ? { OPENAI_API_KEY: (prior.env as Record<string, unknown>).OPENAI_API_KEY } : {} } : {}),
+          };
+          setRestoredSetup({ ...agent, adapterType: "pi_local", adapterConfig: localConfig });
+          setAgentName(current => current.trim() || agent.name);
           setAgentRole(agent.role);
           setAgentAppearance(resolveAgentAppearance(agent.appearance, agent.id));
           const config = agent.adapterConfig;
           if (agent.metadata?.setupAdapterPending === true) {
-            setRunner("auto");
-            setModel("");
+            setRunner("legacy");
             setCommand("");
             setArgs("");
             setUrl("");
           } else {
-            setAdapterType(agentHarnessType(agent.adapterType, config) === "acpx:copilot" ? "paperclip_runner" : agentHarnessType(agent.adapterType, config) as AdapterType);
-            setModel(typeof config.model === "string" ? config.model : "");
-            setCommand(typeof config.command === "string" ? config.command : "");
-            setArgs(Array.isArray(config.args) ? config.args.join(" ") : "");
+            setModel(current => typeof config.model === "string" && config.model.trim() ? config.model : current);
+            setCommand("");
+            setArgs("");
             setUrl(typeof config.url === "string" ? config.url : "");
-            setRunner(agent.adapterType === "paperclip_runner" ? "paperclip" : "legacy");
+            if (typeof config.baseUrl === "string") setLocalBaseUrl(config.baseUrl);
+            setRunner("legacy");
             const binding = agent.runtimeConfig?.aiConnection as AiConnectionBinding | undefined;
             if (binding) setCredentialMode(binding.method === "api_key" ? "api" : "subscription");
             else if ((config.env as Record<string, unknown> | undefined)?.[apiKeyEnvKeyFor(adapterType)]) setCredentialMode("api");
@@ -1367,7 +1308,7 @@ function OnboardingWizardInner({
     }).catch(cause => {
       if (!stillTheSameCompany(companyId)) return;
       setSetupError(true);
-      setError(cause instanceof Error ? cause.message : "Could not create agent setup.");
+      setError(cause instanceof Error ? cause.message : "Не удалось подготовить агента.");
     }).finally(() => {
       preparingSetup.current.delete(companyId);
       setSetupAttempt(attempt => attempt + 1);
@@ -1452,7 +1393,7 @@ function OnboardingWizardInner({
     connectPhase === "collapsing" ||
     connectPhase === "unwindRoom" ||
     connectPhase === "unwindRow";
-  const connectLinkVisible = connectPhase === "idle" || connectPhase === "unwindRow";
+  const connectLinkVisible = !isLocalApi && (connectPhase === "idle" || connectPhase === "unwindRow");
 
   /**
    * When "Connecting" started, and whether the login behind it has finished.
@@ -1566,7 +1507,8 @@ function OnboardingWizardInner({
    */
   const connectSourceLabel = isCopilot ? "GitHub Copilot" : CONNECT_SOURCE_NAMES[adapterType] ?? adapterType;
   const connectCta: { label: string; icon: FooterPrimaryIcon; disabled: boolean } =
-    setupError ? { label: "Retry", icon: "arrow", disabled: false } : connectProgress
+    setupError ? { label: isLocalApi ? "Повторить" : "Retry", icon: "arrow", disabled: false } :
+    isLocalApi ? { label: loading || adapterEnvLoading ? "Проверка подключения…" : "Подключить", icon: loading || adapterEnvLoading ? "spinner" : "arrow", disabled: !connectStepReady || loading || !localBaseUrl.trim() || !model.trim() } : connectProgress
       ? { label: adapterEnvLoading ? "Testing…" : connectProgress, icon: "spinner", disabled: true }
       : connectPhase === "waiting"
       ? { label: "Waiting for code", icon: "spinner", disabled: true }
@@ -1587,7 +1529,7 @@ function OnboardingWizardInner({
               }
           : // Nothing is chosen on arrival, and the row is what chooses. Until
             // it has been answered the button has nothing to do.
-            { label: "Next", icon: "arrow", disabled: true };
+            { label: "Далее", icon: "arrow", disabled: true };
 
   /**
    * Back, on the connect step, unwinds the sign-in before it leaves the step.
@@ -1672,50 +1614,6 @@ function OnboardingWizardInner({
     sourceSelected &&
     (credentialMode === "api" || connectCardSpace || connectStepHasNoSandbox);
 
-  // The default (or a saved) adapterType can name an adapter the server has
-  // since disabled — e.g. a cloud sandbox registry without claude_local. The
-  // grid hides it, so without this snap the wizard would silently keep an
-  // invisible selection and create an agent that can never acquire a lease.
-  useEffect(() => {
-    // Not until the registry has loaded. External adapter types are only
-    // registered once the adapters query resolves, so before that a saved
-    // external adapter is indistinguishable from a disabled one - and snapping
-    // would replace the customer's choice with a built-in and persist it.
-    if (!adapterRegistryLoaded || (adapterType === "paperclip_runner" && !loginPolicyReady)) return;
-    const visible = [...recommendedAdapters, ...moreAdapters].filter(
-      (a) => !a.comingSoon,
-    );
-    if (visible.length === 0) {
-      if (adapterType === "paperclip_runner" && !copilotOnboardingEnabled) { setAdapterType("claude_local"); setModel(""); setCopilotConnection(undefined); setSourcePicked(false); }
-      return;
-    }
-    if (visible.some((a) => a.type === adapterType)) return;
-    const next = (visible.find((a) => a.type !== "paperclip_runner") ?? visible[0]).type as AdapterType;
-    setAdapterType(next);
-    if (adapterType === "paperclip_runner") { setModel(""); setCopilotConnection(undefined); }
-    // The snap is not a choice. It replaces a name the customer can no longer
-    // see with the first one they can, which is the right thing to hold — but
-    // holding it *as chosen* would put a filled tile and an open sign-in panel
-    // on a step nobody has answered, and re-create by the back door exactly the
-    // preselection this step was changed to stop doing. The saved answer was
-    // unofferable, so the question is open again.
-    setSourcePicked(false);
-    if (next === "codex_local") return;
-    if (next === "opencode_local") {
-      setModel(DEFAULT_OPENCODE_LOCAL_MODEL);
-      return;
-    }
-    if (next === "gemini_local") {
-      setModel(DEFAULT_GEMINI_LOCAL_MODEL);
-      return;
-    }
-    if (next === "cursor") {
-      setModel(DEFAULT_CURSOR_LOCAL_MODEL);
-      return;
-    }
-    setModel("");
-  }, [adapterRegistryLoaded, recommendedAdapters, moreAdapters, adapterType, loginPolicyReady, copilotOnboardingEnabled]);
-
   const COMMAND_PLACEHOLDERS: Record<string, string> = {
     claude_local: "claude",
     codex_local: "codex",
@@ -1744,7 +1642,7 @@ function OnboardingWizardInner({
     setAdapterEnvResult(null);
     adapterEnvResultAppliedStoredLoginRef.current = false;
     if (adapterEnvErrorSelectionRef.current !== adapterSetupSelectionRef.current) setAdapterEnvError(null);
-  }, [step, adapterType, runner, model, command, args, url, credentialMode, apiKey, selectedSavedKey, selectedApiKey?.id, savedSubscription?.id, createdCompanyId, copilotConnection, resolvedLoginEnvironmentId, runner === "auto" ? runnerDiscovery.data?.find(item => item.type === adapterType)?.defaultRunner : undefined]);
+  }, [step, adapterType, runner, model, command, args, url, localBaseUrl, credentialMode, apiKey, selectedSavedKey, selectedApiKey?.id, savedSubscription?.id, createdCompanyId, copilotConnection, resolvedLoginEnvironmentId, runner === "auto" ? runnerDiscovery.data?.find(item => item.type === adapterType)?.defaultRunner : undefined]);
 
   /**
    * Leaving the step puts the row back to a question.
@@ -1830,8 +1728,8 @@ function OnboardingWizardInner({
     setAgentName("");
     setAgentAppearance(randomAgentAppearance());
     setAgentRole(DEFAULT_AGENT_ROLE);
-    setAdapterType("claude_local");
-    setRunner("auto");
+    setRunner("legacy");
+    setLocalBaseUrl("");
     setModel("");
     setCommand("");
     setArgs("");
@@ -1898,7 +1796,7 @@ function OnboardingWizardInner({
     if (companyIdNow === companyIdAtStart || companyIdNow === returnedCompanyId) {
       return true;
     }
-    setError("Organization created, but onboarding switched to another organization.");
+    setError("Организация создана, но настройка уже открыта для другой организации.");
     return false;
   }
 
@@ -1974,7 +1872,7 @@ function OnboardingWizardInner({
       // dashboard) so they land on the conversation the agent will start in.
       navigate(prefix ? `/${prefix}/issues/${issueRef}` : `/issues/${issueRef}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to launch first task");
+      setError(err instanceof Error ? err.message : "Не удалось запустить первую задачу");
     } finally {
       setLoading(false);
     }
@@ -2017,8 +1915,8 @@ function OnboardingWizardInner({
     } catch (err) {
       setError(
         err instanceof Error
-          ? `Could not store the API key: ${err.message}`
-          : "Could not store the API key.",
+          ? `Не удалось сохранить ключ API: ${err.message}`
+          : "Не удалось сохранить ключ API.",
       );
       return false;
     }
@@ -2033,7 +1931,7 @@ function OnboardingWizardInner({
       ...defaultCreateValues,
       adapterType,
       runner,
-      ...(isCopilot ? { adapterSchemaValues: { provider: "acpx", acpxAgent: "copilot" } } : adapterType === "pi_local" ? { adapterSchemaValues: savedConfig } : {}),
+      ...(isCopilot ? { adapterSchemaValues: { provider: "acpx", acpxAgent: "copilot" } } : adapterType === "pi_local" ? { adapterSchemaValues: { ...savedConfig, baseUrl: localBaseUrl.trim() } } : {}),
       resolvedRunner: setupRunner ?? resolvedRunner,
       model:
         adapterType === "gemini_local"
@@ -2056,6 +1954,7 @@ function OnboardingWizardInner({
           : defaultCreateValues.dangerouslyBypassSandbox
     });
     const savedEnv = { ...((savedConfig.env as Record<string, unknown>) ?? {}) };
+    if (isLocalApi && savedConfig.baseUrl !== localBaseUrl.trim()) delete savedEnv.OPENAI_API_KEY;
     if (adapterType === "claude_local") {
       if (credentialMode === "api" || managedBindingForStep()) delete savedEnv[CLAUDE_OAUTH_TOKEN_ENV_KEY];
       if (credentialMode === "subscription" || managedBindingForStep()) {
@@ -2063,8 +1962,13 @@ function OnboardingWizardInner({
         delete savedEnv.ANTHROPIC_AUTH_TOKEN;
       }
     }
-    const config = { ...savedConfig, ...builtConfig,
+    const config: Record<string, unknown> = { ...savedConfig, ...builtConfig,
       ...((savedConfig.env || builtConfig.env) ? { env: { ...savedEnv, ...((builtConfig.env as object) ?? {}) } } : {}) };
+    if (isLocalApi) {
+      Object.assign(config, { baseUrl: localBaseUrl.trim(), model: `local/${model.trim().replace(/^local\//, "")}` });
+      delete config.command;
+      delete config.args;
+    }
     if (adapterType === "claude_local" && forceUnsetAnthropicApiKey) {
       const env =
         typeof config.env === "object" &&
@@ -2134,7 +2038,7 @@ function OnboardingWizardInner({
       await agentsApi.update(id, JSON.parse(setupSnapshot), companyId);
     });
     void setupSave.current.catch(cause => {
-      if (stillTheSameCompany(companyId)) setError(cause instanceof Error ? cause.message : "Could not save agent setup.");
+      if (stillTheSameCompany(companyId)) setError(cause instanceof Error ? cause.message : "Не удалось сохранить настройки агента.");
     });
   }, [setupSnapshot, setupAgentId, createdCompanyId]);
 
@@ -2147,7 +2051,7 @@ function OnboardingWizardInner({
     if (!runnerDiscoveryReady) return null;
     if (!createdCompanyId) {
       setAdapterEnvError(
-        "Create or select an organization before testing adapter environment."
+        "Создайте или выберите организацию перед проверкой подключения."
       );
       return null;
     }
@@ -2276,7 +2180,7 @@ function OnboardingWizardInner({
       if (!testIsCurrent()) return null;
       adapterEnvErrorSelectionRef.current = selection || null;
       setAdapterEnvError(
-        err instanceof Error ? err.message : "Adapter environment test failed"
+        err instanceof Error ? err.message : "Не удалось проверить подключение к модели"
       );
       return null;
     } finally {
@@ -2318,7 +2222,7 @@ function OnboardingWizardInner({
       setSelectedCompanyId(company.id);
       setStep(3);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create organization");
+      setError(err instanceof Error ? err.message : "Не удалось создать организацию");
     } finally {
       creatingCompanyRef.current = false;
       setLoading(false);
@@ -2354,6 +2258,13 @@ function OnboardingWizardInner({
     setError(null);
     let qualifiedDiscovery: { adapters: AdapterInfo[]; environmentId: string | null } | undefined;
     try {
+      if (isLocalApi) {
+        try {
+          const endpoint = new URL(localBaseUrl.trim());
+          if (!["http:", "https:"].includes(endpoint.protocol) || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw new Error();
+        } catch { throw new Error("Укажите URL API с http:// или https://, без логина, параметров и фрагмента."); }
+        if (!model.trim().replace(/^local\//, "")) throw new Error("Укажите идентификатор модели.");
+      }
       if (adapterType === "opencode_local") {
         const selectedModelId = model.trim();
         if (!isValidOpenCodeModelId(selectedModelId)) {
@@ -2470,8 +2381,8 @@ function OnboardingWizardInner({
             ? result.checks.find(check => check.level === "error")?.message : undefined;
           setError(
             nativeCodexError || (result.status === "fail"
-              ? "The environment test failed. Fix the reported checks before you hire this agent."
-              : "No working authentication was found. Fix the reported checks before you hire this agent."),
+              ? "Проверка подключения не прошла. Исправьте параметры и повторите попытку."
+              : "Сервер отклонил авторизацию. Проверьте ключ API."),
           );
           return;
         }
@@ -2538,7 +2449,7 @@ function OnboardingWizardInner({
       if (hire.approval) {
         await approvalsApi.approve(
           hire.approval.id,
-          "Approved during onboarding first-agent setup."
+          "Согласовано при настройке первого агента."
         );
         queryClient.invalidateQueries({
           queryKey: queryKeys.approvals.list(createdCompanyId)
@@ -2559,7 +2470,7 @@ function OnboardingWizardInner({
       setStep(5);
     } catch (err) {
       if (!isCurrent()) return;
-      setError(err instanceof Error ? err.message : "Failed to create agent");
+      setError(err instanceof Error ? err.message : "Не удалось создать агента");
     } finally {
       if (hiringAgentRef.current === attempt) hiringAgentRef.current = null;
       if (activeClaudeQualification.current?.attempt === attempt) activeClaudeQualification.current = null;
@@ -2707,6 +2618,8 @@ function OnboardingWizardInner({
   const heroRoomTarget = step === 1 || !arrived ? heroRoomMotion.closed : arrival && lastStep.current === entryStep ? heroRoomArrival : heroRoomMotion.open;
   const capsuleTarget = step === 1 || !arrived ? capsuleRoomExit : step === 3 && stepHandoff && lastStep.current === 1 ? capsuleRoomEnter : capsuleHeroMotion.animate;
   const visibleError = error ?? (launchStateIncomplete ? INCOMPLETE_ONBOARDING_STATE_MESSAGE : null);
+  const displayError = visibleError && /[а-яё]/i.test(visibleError) ? visibleError
+    : visibleError ? "Не удалось завершить настройку. Проверьте доступность сервера и повторите попытку." : null;
 
   return (
     <Dialog
@@ -2880,12 +2793,12 @@ function OnboardingWizardInner({
                       title={
                         <motion.span key={step} {...titleSwapMotion} className="inline-block">
                           {step === 1
-                            ? "What is the name of your organization?"
+                            ? "Как называется ваша организация?"
                             : step === 3
-                              ? "Create your first agent"
+                              ? "Создайте первого агента"
                               : step === 4
-                                ? "Connect a model"
-                                : "Let's get started..."}
+                                ? isLocalApi ? "Подключение модели" : "Connect a model"
+                                : "Всё готово к работе"}
                         </motion.span>
                       }
                     />
@@ -2907,8 +2820,8 @@ function OnboardingWizardInner({
                       <p className="pt-2 text-base leading-relaxed text-muted-foreground">
                         <motion.span key={step} {...titleSwapMotion} className="inline-block">
                           {step === 4
-                            ? "Paperclip works with your subscription or API keys."
-                            : `${agentName.trim() || "Your first agent"} is ready to work!`}
+                            ? isLocalApi ? "Укажите адрес локального или корпоративного API." : "Paperclip works with your subscription or API keys."
+                            : `${agentName.trim() || "Ваш первый агент"} готов к работе!`}
                         </motion.span>
                       </p>
                     </motion.div>
@@ -2934,11 +2847,11 @@ function OnboardingWizardInner({
               {step === 1 && (
                 <motion.div key="step-1" {...stepContentMotion} exit={stepHandoff ? stepContentMotion.exit : undefined} className="mx-auto flex w-full flex-col gap-9">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="onboarding-company-name">Name</Label>
+                    <Label htmlFor="onboarding-company-name">Название организации</Label>
                     <Input
                       id="onboarding-company-name"
                       className="h-(--sz-44px) rounded-lg border-transparent bg-muted shadow-none dark:bg-muted"
-                      placeholder="e.g. Northwind Labs"
+                      placeholder="Например, Сказ"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       onKeyDown={(e) => {
@@ -2962,7 +2875,7 @@ function OnboardingWizardInner({
               {step === 3 && (
                 <motion.div key="step-3" {...stepContentMotion} exit={stepHandoff ? stepContentMotion.exit : undefined} className="mx-auto flex w-full flex-col gap-9">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="onboarding-agent-name">Agent name</Label>
+                    <Label htmlFor="onboarding-agent-name">Имя агента</Label>
                     {/*
                       Filled, not outlined, and the column's full width — the
                       same field the naming step before the hand-off draws.
@@ -2975,7 +2888,7 @@ function OnboardingWizardInner({
                     <Input
                       id="onboarding-agent-name"
                       className="h-(--sz-44px) rounded-lg border-transparent bg-muted shadow-none dark:bg-muted"
-                      placeholder="e.g. Chief of staff"
+                      placeholder="Например, Координатор"
                       value={agentName}
                       onChange={(e) => setAgentName(e.target.value)}
                       onKeyDown={(e) => {
@@ -2993,437 +2906,21 @@ function OnboardingWizardInner({
               {/* Step 4: Connect a model — adapter + model + env check (capsule above) */}
               {step === 4 && (
                 <motion.div key="step-4" {...stepContentMotion} exit={stepHandoff ? stepContentMotion.exit : undefined} className="space-y-8">
-                  <div>
-                    {/* Sources come from `recommendedAdapters`, not a list
-                        written here — that filter is `recommended` in the
-                        display registry, so a third tile appears the day
-                        someone marks one rather than the day someone
-                        remembers to edit this file.
-
-                        Picking one starts the sign-in now. The row is the
-                        question, and answering it is what opens the card. */}
-                    <ModelSourceTiles
-                      label="Model source"
-                      sources={recommendedAdapters.map((opt) => ({
-                        id: opt.type,
-                        label: opt.type === "paperclip_runner" ? "GitHub Copilot" : CONNECT_SOURCE_NAMES[opt.type] ?? opt.label,
-                        icon: <ModelSourceMark type={opt.type} Fallback={opt.icon} />,
-                        ...(opt.type === "paperclip_runner" ? { credentialMode: "api" as const } : {}),
-                      }))}
-                      mode={credentialMode}
-                      selectedId={
-                        sourcePicked &&
-                        recommendedAdapters.some((opt) => opt.type === adapterType)
-                          ? adapterType
-                          : null
-                      }
-                      collapsed={connectCollapsed}
-                      settling={connectPhase === "unwindRow"}
-                      onSelect={(id) => {
-                        if (connectPhase !== "idle") return;
-                        autoConnectStartedRef.current = false;
-                        setSourcePicked(true);
-                        setAdapterType(id);
-                        if (id !== adapterType) setRunner("auto");
-                        if (id !== adapterType) {
-                          if (id === "opencode_local") setModel(DEFAULT_OPENCODE_LOCAL_MODEL);
-                          else if (id !== "codex_local") setModel("");
-                        }
-                        setConnectPhase("collapsing");
-                      }}
-                    />
-
-                    {/* Fades on the first beat but keeps its space until the
-                        second, so pressing a tile moves nothing vertically.
-                        Once a sign-in is running there is no switching to keys
-                        without abandoning it, so it goes rather than sitting
-                        there inviting a press that cannot be honoured. */}
-                    <motion.div
-                      className="overflow-hidden"
-                      /*
-                        Inert once it has faded. It is clipped to nothing rather
-                        than unmounted, so without this it stays clickable and
-                        focusable — a control that has stopped applying, still
-                        answering to a keyboard and still able to change the
-                        credential mode out from under a running sign-in.
-                      */
-                      inert={!connectLinkVisible}
-                      initial={false}
-                      animate={{
-                        opacity: connectLinkVisible ? 1 : 0,
-                        height: connectLinkSpace ? "auto" : 0,
-                      }}
-                      transition={{ opacity: SOURCE_LINK_EXIT, height: MAKE_ROOM }}
-                    >
-                      <div className="-ml-3 mt-1">
-                        <CredentialModeLink mode={credentialMode} onChange={setCredentialMode} />
-                        {savedKeys.options.length > 0 && <p className="px-3 text-sm text-muted-foreground">{savedKeys.options.length} saved API {savedKeys.options.length === 1 ? "key available" : "keys available"}.</p>}
-                        {credentialMode === "subscription" && authSignalStatus === "present" && <p className="px-3 text-sm text-muted-foreground">An existing provider connection is available.</p>}
-                      </div>
-                    </motion.div>
+                  <div className="flex items-center justify-center gap-3">
+                    <PaperclipLockup title="Сказ" className="h-8 w-auto" />
                   </div>
-
-                  {/*
-                    Room first, card second. `height` opens the space — which the
-                    link's collapse shares, so the column slides once — and the
-                    opacity only starts once that has finished. Reversed on the
-                    way out: fade, then give the room back.
-
-                    Nothing mounts to make that happen. A mount changes layout in
-                    one frame, and no easing can smooth a step that has already
-                    happened. Which means the card is always in the DOM, so it is
-                    `inert` while closed: a clipped element is still focusable and
-                    still announced, and the authorization field must not be
-                    reachable inside a card nobody can see.
-                  */}
-                  <motion.div
-                    className="overflow-hidden"
-                    inert={!connectCardLive}
-                    initial={false}
-                    animate={{
-                      height: connectCardSpace ? "auto" : 0,
-                      marginTop: connectCardSpace ? 20 : 0,
-                      opacity: connectCardLive ? 1 : 0,
-                    }}
-                    transition={{
-                      height: MAKE_ROOM,
-                      marginTop: MAKE_ROOM,
-                      opacity: connectCardLive
-                        ? { ...CARD_ENTER, delay: MAKE_ROOM.duration }
-                        : CARD_EXIT,
-                    }}
-                  >
-                    {/*
-                      The wrapper is always rendered — that is what lets its
-                      height animate rather than jump — but its contents are
-                      not, and they outlive the space by a beat. See
-                      `connectCardMounted`.
-                    */}
-                    {!connectCardMounted ? null : connectProgress ? (
-                      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="size-4 animate-spin" />
-                        {connectProgress}
-                      </p>
-                    ) : isCopilot && createdCompanyId ? (
-                      <OnboardingLoginCard instruction="Connect GitHub Copilot and choose a model">
-                        {!copilotEnvironmentReady ? <p role="alert" className="text-sm text-destructive">{loginEnvironmentResolution.error ?? "Waiting for execution environment settings. If this persists, check your instance settings."}</p> : <>
-                          <AiConnectionField companyId={createdCompanyId} agentName={agentName} adapterType="copilot_runtime" environmentId={resolvedLoginEnvironmentId ?? undefined} value={copilotConnection} onChange={(binding) => {
-                            const parsed = aiConnectionBindingSchema.safeParse(binding);
-                            if (!parsed.success || parsed.data.provider !== "github" || parsed.data.method !== "api_key") {
-                              setError("Choose a GitHub Copilot token connection for this source.");
-                              return;
-                            }
-                            setError(null);
-                            setCopilotConnection(parsed.data);
-                            setModel("");
-                            if (JSON.stringify(copilotConnection) === JSON.stringify(parsed.data)) void refreshAdapterModels();
-                          }} />
-                          {copilotConnection && <label className="block space-y-2 text-sm">
-                            <span>Model</span>
-                            <select aria-label="Copilot model" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={model} disabled={adapterModelsFetching} onChange={(event) => setModel(event.target.value)}>
-                              <option value="">{adapterModelsFetching ? "Loading models…" : "Select a model"}</option>
-                              {model && !adapterModels?.some((entry) => entry.id === model) && <option value={model}>{model} (unavailable)</option>}
-                              {(adapterModels ?? []).map((entry) => <option key={entry.id} value={entry.id}>{entry.label}</option>)}
-                            </select>
-                            {adapterModelsError && <p role="alert" className="text-destructive">{adapterModelsError instanceof Error ? adapterModelsError.message : "Could not discover Copilot models."}</p>}
-                            {!adapterModelsFetching && !adapterModelsError && adapterModels?.length === 0 && <p role="alert" className="text-destructive">No available Copilot models were discovered. Check this account’s Copilot access.</p>}
-                            <Button type="button" variant="ghost" disabled={adapterModelsFetching} onClick={() => void refreshAdapterModels()}>Refresh models</Button>
-                          </label>}
-                        </>}
-                      </OnboardingLoginCard>
-                    ) : credentialMode === "api" ? (
-                      <OnboardingLoginCard
-                        instruction={savedKeys.options.length ? "Choose a saved API key or enter a new one" : `Provide your ${
-                          CONNECT_SOURCE_NAMES[adapterType] ?? adapterType
-                        } API key to connect`}
-                      >
-                        <SavedProviderKeySelect {...savedKeys} disabled={loading || adapterEnvLoading} value={selectedApiKey?.id ?? ""} onChange={(id) => {
-                          setSelectedSavedKey(createdCompanyId ? { companyId: createdCompanyId, envKey: apiKeyEnvKeyFor(adapterType), id } : null);
-                          setApiKey("");
-                        }} />
-                        {!selectedApiKey && <OnboardingCardField
-                          label="API key"
-                          placeholder="Enter API key here"
-                          masked
-                          // The card is the answer to the tile just pressed, so
-                          // the field is unambiguously the next thing. Carried
-                          // over from the key field this card replaced.
-                          autoFocus
-                          value={apiKey}
-                          onChange={(value) => {
-                            setSelectedSavedKey(createdCompanyId ? { companyId: createdCompanyId, envKey: apiKeyEnvKeyFor(adapterType), id: "" } : null);
-                            setApiKey(value);
-                          }}
-                          onSubmit={() => handleConnectStepPrimary()}
-                        />}
-                      </OnboardingLoginCard>
-                    ) : connectStepNeedsLogin &&
-                      createdCompanyId &&
-                      resolvedLoginEnvironmentId ? (
-                      /* The same panel the agent configuration form shows after
-                         a test — see AdapterLoginPanel in AgentConfigForm.tsx —
-                         in the connect step's chrome. It owns the session; the
-                         step owns the sequence around it.
-
-                         Unmounting it is not the cancel: the session stays
-                         reachable for a later resume, so Back and a source
-                         switch only hide the card, and nothing here releases
-                         the session early — see `unwindConnectStep`.
-
-                         No "Use saved login" control: the hire step already
-                         applies a stored login on its own. */
-                      <AdapterLoginPanel
-                        key={`${adapterType}:${resolvedLoginEnvironmentId}`}
-                        companyId={createdCompanyId}
-                        adapterType={adapterType}
-                        environmentId={resolvedLoginEnvironmentId}
-                        chrome="onboarding"
-                        aiConnection={managedProvider === "anthropic" || managedProvider === "openai" || managedProvider === "xai" ? { provider: managedProvider, method: "subscription", name: `My ${CONNECT_SOURCE_NAMES[adapterType] ?? managedProvider} subscription`, ownership: "personal", agentIds: [], allAgents: true } : undefined}
-                        autoStart
-                        onPromptReady={(url) => {
-                          setConnectAuthUrl(url);
-                          // The prompt arriving is what ends the waiting beat.
-                          if (url) setConnectPhase((p) => (p === "loading" ? "ready" : p));
-                        }}
-                        onCodeSubmitted={() => {
-                          // The button reacts to the paste, not to the server.
-                          // Waiting for the login to be stored left about a
-                          // second of a button still reading "Waiting for code"
-                          // after the code had already gone in.
-                          phaseBeforeSubmitRef.current = connectPhase;
-                          connectingSinceRef.current = Date.now();
-                          setConnectCredentialStored(false);
-                          setConnectPhase("connecting");
-                        }}
-                        onSubmitFailed={() => {
-                          // Only while the button still says "Connecting". The
-                          // panel stays mounted through Back's exit, so a failure
-                          // that landed after Back restored the button and
-                          // reopened the card the customer was leaving — without
-                          // the address Back had cleared, so its sign-in could
-                          // not even be pressed.
-                          if (connectPhase !== "connecting") return;
-                          // Refused, failed or timed out — the card says which.
-                          // The button goes back to what it was offering rather
-                          // than spinning on a login that is not coming.
-                          connectingSinceRef.current = null;
-                          setConnectCredentialStored(false);
-                          setConnectPhase(
-                            phaseBeforeSubmitRef.current === "ready" ? "ready" : "waiting",
-                          );
-                        }}
-                        onConnected={() => {
-                          if (managedSubscriptionProvider) managedSubscriptionRef.current = { companyId: createdCompanyId, binding: { provider: managedSubscriptionProvider, method: "subscription", mode: "responsible_user" } };
-                          setConnectAuthUrl(null);
-                          // Not into a card the customer has left. The panel is
-                          // still mounted through Back's exit, and a login that
-                          // finished there pulled the step back into "Connecting"
-                          // and on into a hire they had just backed away from.
-                          // The login is stored either way; what this refuses is
-                          // only the step moving forward after they chose to go.
-                          if (
-                            connectPhase !== "loading" &&
-                            connectPhase !== "ready" &&
-                            connectPhase !== "waiting" &&
-                            connectPhase !== "connecting"
-                          ) {
-                            return;
-                          }
-                          // The hold before the step advances is the phase's own
-                          // beat, above, so that backing out during it cancels
-                          // the hire. It counts from the paste when there was
-                          // one, and from here for a login that finished without
-                          // one — a resumed session, or a code handed out rather
-                          // than pasted back.
-                          if (connectingSinceRef.current === null) {
-                            connectingSinceRef.current = Date.now();
-                          }
-                          setConnectCredentialStored(true);
-                          setConnectPhase("connecting");
-                        }}
-                        onStored={() => {
-                          queryClient.invalidateQueries({
-                            queryKey: queryKeys.agents.authSignal(
-                              createdCompanyId,
-                              adapterType,
-                              resolvedLoginEnvironmentId,
-                            ),
-                          });
-                        }}
-                      />
-                    ) : hasSavedSubscription || localLogin.status === "ready" ? null : connectStepHasNoSandbox ? (
-                      canUseLocalLogin && managedProvider ? (
-                        <LocalProviderLoginInstructions adapterType={adapterType} login={{ ...localLogin, retry: () => { autoConnectStartedRef.current = false; setError(null); localLogin.retry(); } }} />
-                      ) : <p className="text-xs text-muted-foreground">This environment does not support browser sign-in. Choose another sign-in environment or connect with an API key.</p>
-                    ) : null}
-                  </motion.div>
-
-                  {sourceSelected && ["codex_local", "claude_local", "opencode_local", "pi_local"].includes(adapterType) && <details className="space-y-3">
-                    <summary className="cursor-pointer text-sm text-muted-foreground">Advanced</summary>
-                    <AgentRunnerSelect value={runner} disabled={loading || adapterEnvLoading}
-                      pending={runnerDiscovery.isFetching} error={runnerDiscovery.error?.message} onRetry={() => { void runnerDiscovery.refetch(); }}
-                      defaultRunner={runnerDiscovery.data?.find(item => item.type === adapterType)?.defaultRunner}
-                      supportedRunners={runnerDiscovery.data?.find(item => item.type === adapterType)?.supportedRunners}
-                      onChange={setRunner} />
-                  </details>}
-
-                  {/* Conditional adapter fields */}
-                  {/* Direct adapters resolve their defaults. Copilot requires
-                      an explicit authenticated model in its connection card. */}
-
-                  {/* Progress is shown above; failed checks remain actionable here. */}
-                  {/* Not while the hire is in flight. The probe's result lands
-                      before the hire it gates has finished, so a warn that does
-                      not block — the identity and target INFO checks, which
-                      every run reports — rendered a block of diagnostics for the
-                      moment between the probe returning and the step advancing.
-                      It read as an error thrown up by a sign-in that had just
-                      succeeded.
-
-                      `loading` is the right gate rather than the connect phase:
-                      it is false again by the time a blocking result has stopped
-                      the hire, because `handleGiveHeartbeat` clears it in its
-                      `finally` after the early return — so a genuine block still
-                      shows its checks, which is the whole reason this is here. */}
-                  {isLocalAdapter && !loading && (visibleAdapterEnvError || (adapterEnvResult && adapterEnvResult.status !== "pass")) && (
-                    <div className="space-y-2 rounded-md border border-border p-3">
-                      {visibleAdapterEnvError && (
-                        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-(length:--text-micro) text-destructive">
-                          {visibleAdapterEnvError}
-                        </div>
-                      )}
-
-                      {runnerDiscoveryError && (
-                        <Button type="button" variant="outline" disabled={runnerDiscovery.isFetching || loginEnvironmentsFetching || loginSettingsFetching || loginPolicyFetching} onClick={() => void retryRunnerAvailability()}>
-                          Retry setup
-                        </Button>
-                      )}
-
-                      {adapterEnvResult &&
-                      adapterEnvResult.status === "pass" ? (
-                        <div className="space-y-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
-                          {/* Use the shared status-chip helper with the done
-                              status hue, so the pass banner derives its fill,
-                              text, and border from the design tokens in both
-                              modes instead of raw color values. */}
-                          <div
-                            className="status-chip flex items-center gap-2 rounded-md border px-2.5 py-2 text-(length:--text-micro)"
-                            style={{ "--sc": "var(--status-task-done)" } as CSSProperties}
-                          >
-                            <Check className="size-3.5 shrink-0" />
-                            <span className="font-medium">Passed</span>
-                          </div>
-                          {/* Show the checks on a pass too, so the target and the
-                              auth signals stay visible before the hire. */}
-                          <AdapterEnvironmentResult result={adapterEnvResult} />
-                        </div>
-                      ) : adapterEnvResult ? (
-                        <AdapterEnvironmentResult result={adapterEnvResult} />
-                      ) : null}
-
-                      {shouldSuggestUnsetAnthropicApiKey && (
-                        <div className="rounded-md border border-amber-300/60 bg-amber-50/40 px-2.5 py-2 space-y-2">
-                          <p className="text-(length:--text-micro) text-amber-900/90 leading-relaxed">
-                            Claude failed while{" "}
-                            <span className="font-mono">ANTHROPIC_API_KEY</span>{" "}
-                            is set. You can clear it in this adapter config
-                            and retry the probe.
-                          </p>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2.5 text-xs"
-                            disabled={
-                              adapterEnvLoading || unsetAnthropicLoading
-                            }
-                            onClick={() => void handleUnsetAnthropicApiKey()}
-                          >
-                            {unsetAnthropicLoading
-                              ? "Retrying..."
-                              : "Unset ANTHROPIC_API_KEY"}
-                          </Button>
-                        </div>
-                      )}
-
-                      {adapterEnvResult && adapterEnvResult.status === "fail" && (
-                        <div className="rounded-md border border-border/70 bg-muted/20 px-2.5 py-2 text-(length:--text-micro) space-y-1.5">
-                          <p className="font-medium">Manual debug</p>
-                          <p className="text-muted-foreground font-mono break-all">
-                            {adapterType === "cursor"
-                              ? `${effectiveAdapterCommand} -p --mode ask --output-format json \"Respond with hello.\"`
-                              : adapterType === "codex_local"
-                              ? `${effectiveAdapterCommand} exec --json -`
-                              : adapterType === "gemini_local"
-                                ? `${effectiveAdapterCommand} --output-format json "Respond with hello."`
-                              : adapterType === "kimi_local"
-                                ? `${effectiveAdapterCommand} -p "Respond with hello." --output-format stream-json`
-                              : adapterType === "opencode_local"
-                                ? `${effectiveAdapterCommand} run --format json "Respond with hello."`
-                              : `${effectiveAdapterCommand} --print - --output-format stream-json --verbose`}
-                          </p>
-                          <p className="text-muted-foreground">
-                            Prompt:{" "}
-                            <span className="font-mono">Respond with hello.</span>
-                          </p>
-                          {adapterType === "claude_local" || adapterType === "codex_local" ? (
-                            <p className="text-muted-foreground">
-                              If authentication fails, connect your subscription in the browser above or use an API key.
-                            </p>
-                          ) : adapterType === "cursor" ||
-                          adapterType === "gemini_local" ||
-                          adapterType === "kimi_local" ||
-                          adapterType === "opencode_local" ? (
-                            <p className="text-muted-foreground">
-                              If auth fails, set{" "}
-                              <span className="font-mono">
-                                {adapterType === "cursor"
-                                  ? "CURSOR_API_KEY"
-                                  : adapterType === "gemini_local"
-                                    ? "GEMINI_API_KEY"
-                                    : adapterType === "kimi_local"
-                                      ? "KIMI_MODEL_NAME + KIMI_MODEL_API_KEY"
-                                    : "OPENAI_API_KEY"}
-                              </span>{" "}
-                              in env or run{" "}
-                              <span className="font-mono">
-                                {adapterType === "cursor"
-                                  ? "agent login"
-                                  : adapterType === "gemini_local"
-                                      ? "gemini auth"
-                                      : adapterType === "kimi_local"
-                                        ? "kimi login"
-                                      : "opencode auth login"}
-                              </span>
-                              .
-                            </p>
-                          ) : (
-                            <p className="text-muted-foreground">If login is required, connect the provider above and retry.</p>
-                          )}
-                        </div>
-                      )}
+                  <OnboardingLoginCard instruction="Корпоративный или локальный API">
+                    <div className="space-y-3">
+                    <label className="block space-y-1 text-xs text-muted-foreground">URL API<OnboardingCardField label="URL API" placeholder="http://localhost:11434/v1" value={localBaseUrl} disabled={loading || adapterEnvLoading} onSubmit={handleConnectStepPrimary}
+                      onChange={value => { setLocalBaseUrl(value); setApiKey(""); apiKeySecretRef.current = null; }} /></label>
+                    <label className="block space-y-1 text-xs text-muted-foreground">Модель<OnboardingCardField label="Модель" placeholder="qwen3-coder:30b" value={model.replace(/^local\//, "")} onChange={setModel} disabled={loading || adapterEnvLoading} onSubmit={handleConnectStepPrimary} /></label>
+                    <label className="block space-y-1 text-xs text-muted-foreground">Ключ API (необязательно)<OnboardingCardField label="Ключ API (необязательно)" placeholder="Оставьте пустым для сервера без авторизации" masked value={apiKey} onChange={setApiKey} disabled={loading || adapterEnvLoading} onSubmit={handleConnectStepPrimary} /></label>
+                    <p className="text-xs text-muted-foreground">Запросы идут только на указанный сервер. Если он работает без авторизации, оставьте ключ пустым.</p>
                     </div>
-                  )}
-
-                  {(adapterType === "http" ||
-                    adapterType === "openclaw_gateway") && (
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">
-                        {adapterType === "openclaw_gateway"
-                          ? "Gateway URL"
-                          : "Webhook URL"}
-                      </label>
-                      <input
-                        className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50"
-                        placeholder={
-                          adapterType === "openclaw_gateway"
-                            ? "ws://127.0.0.1:18789"
-                            : "https://..."
-                        }
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                      />
-                    </div>
-                  )}
+                  </OnboardingLoginCard>
+                  {!sourceSelected && <p role="alert" className="text-sm text-destructive">Локальный движок недоступен. Проверьте установку Pi на сервере.</p>}
+                  {visibleAdapterEnvError && <details className="text-sm text-destructive"><summary>Не удалось проверить подключение</summary><p>{visibleAdapterEnvError}</p></details>}
+                  {adapterEnvResult?.status === "fail" && <details className="text-sm text-destructive"><summary>Подробности проверки</summary>{adapterEnvResult.checks.map(check => <p key={check.code}>{check.message}</p>)}</details>}
                 </motion.div>
               )}
               </AnimatePresence>
@@ -3437,7 +2934,8 @@ function OnboardingWizardInner({
               {/* Error */}
               {visibleError && (
                 <div className="mt-3">
-                  <p className="text-xs text-destructive">{visibleError}</p>
+                  <p role="alert" className="text-xs text-destructive">{displayError}</p>
+                  {visibleError !== displayError && <details className="text-xs text-muted-foreground"><summary>Технические сведения</summary><p>{visibleError}</p></details>}
                 </div>
               )}
 
@@ -3462,20 +2960,20 @@ function OnboardingWizardInner({
                   // prototype's own local flow draws with "Next".
                   primaryLabel={
                     step === 1
-                      ? "Continue"
+                      ? "Продолжить"
                       : step === 5
-                        ? "Get started"
+                        ? "Начать работу"
                         : step === 4
                           ? connectCta.label
-                          : "Next"
+                          : "Далее"
                   }
                   primaryIcon={step === 4 ? connectCta.icon : undefined}
                   loadingLabel={
                     step === 1
-                      ? "Creating..."
+                      ? "Создание…"
                       : step === 4
-                        ? "Connecting"
-                        : "Launching..."
+                        ? "Подключение…"
+                        : "Запуск…"
                   }
                   // The browser-code login is finished on this screen, so the
                   // button is genuinely busy for its duration and shows it. The

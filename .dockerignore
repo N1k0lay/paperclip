@@ -1,6 +1,16 @@
 .git
 .github
 .paperclip
+.paperclip-local
+.omx
+.codex
+work
+outputs
+**/.env
+**/.env.*
+**/skaz.env
+!**/.env.example
+!**/.env.*.example
 .pnpm-store
 node_modules
 **/node_modules

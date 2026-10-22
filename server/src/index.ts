@@ -717,7 +717,7 @@ async function startServerWithDatabaseTeardown(
     hostname: config.host,
   });
   if (config.authBaseUrlMode === "explicit" && config.authPublicBaseUrl) {
-    config.authPublicBaseUrl = rewriteLoopbackUrlPort(config.authPublicBaseUrl, listenPort);
+    config.authPublicBaseUrl = rewriteLoopbackUrlPort(config.authPublicBaseUrl, listenPort, requestedListenPort);
   }
   
   let authReady = config.deploymentMode === "local_trusted";

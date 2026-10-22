@@ -30,12 +30,12 @@ describe("ui adapter registry", () => {
     syncExternalAdapters([]);
   });
 
-  it("registers adapters for lookup and listing", () => {
+  it("retains historical adapter lookup without offering it for selection", () => {
     registerUIAdapter(externalUIAdapter);
 
     expect(findUIAdapter("external_test")).toBe(externalUIAdapter);
     expect(getUIAdapter("external_test")).toBe(externalUIAdapter);
-    expect(listUIAdapters().some((adapter) => adapter.type === "external_test")).toBe(true);
+    expect(listUIAdapters().map(adapter => adapter.type)).toEqual(["pi_local"]);
   });
 
   it("falls back to the process parser for unknown types after unregistering", () => {

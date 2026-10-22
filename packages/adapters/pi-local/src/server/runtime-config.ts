@@ -11,6 +11,34 @@ type PreparedPiRuntimeConfig = {
   cleanup: () => Promise<void>;
 };
 
+export function resolvePiLocalProvider(config: {
+  baseUrl?: unknown;
+  model?: unknown;
+  extraArgs?: unknown;
+  args?: unknown;
+}): { baseUrl: string; modelId: string } | null {
+  if (config.baseUrl === undefined || config.baseUrl === "") return null;
+  let url: URL;
+  try {
+    if (typeof config.baseUrl !== "string") throw new Error();
+    url = new URL(config.baseUrl.trim());
+  } catch {
+    throw new Error("Укажите полный URL API с http:// или https://, например http://localhost:11434/v1.");
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+    throw new Error("URL API должен использовать HTTP или HTTPS без логина, пароля, параметров и фрагмента.");
+  }
+  const model = typeof config.model === "string" ? config.model.trim() : "";
+  const modelId = model.startsWith("local/") ? model.slice("local/".length) : model;
+  if (!modelId || /[\u0000-\u001f\u007f]/.test(modelId)) {
+    throw new Error("Укажите идентификатор модели локального API.");
+  }
+  if ([config.extraArgs, config.args].some(args => Array.isArray(args) && args.length > 0)) {
+    throw new Error("Произвольные аргументы Pi отключены: они могут изменить провайдера или адрес API.");
+  }
+  return { baseUrl: url.toString().replace(/\/+$/, ""), modelId };
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -88,8 +116,9 @@ function parseProviderConfig(
   }
 }
 
-// Materialize custom Pi providers supplied via PAPERCLIP_PI_PROVIDERS (a JSON
-// object in Pi's models.json "providers" shape) into a managed agent-config dir.
+// Materialize a per-agent endpoint or legacy PAPERCLIP_PI_PROVIDERS configuration
+// into a managed agent-config dir. A per-agent endpoint uses an isolated registry
+// and keeps its optional key in the child environment.
 //
 // Pi has no base-url CLI flag or env var: the only mechanism for pointing it at a
 // custom/OpenAI- or Anthropic-compatible endpoint is a models.json file in its
@@ -107,12 +136,24 @@ function parseProviderConfig(
 // and repoints PI_CODING_AGENT_DIR at the in-sandbox copy.
 export async function preparePiRuntimeConfig(input: {
   env: Record<string, string>;
+  config?: { baseUrl?: unknown; model?: unknown };
 }): Promise<PreparedPiRuntimeConfig> {
+  const localProvider = resolvePiLocalProvider(input.config ?? {});
   const resolveEnv = (name: string): string | undefined => input.env[name] ?? process.env[name];
-  const { providers, warning } = parseProviderConfig(
+  const parsed = localProvider ? { providers: null, warning: null } : parseProviderConfig(
     input.env.PAPERCLIP_PI_PROVIDERS ?? process.env.PAPERCLIP_PI_PROVIDERS,
     resolveEnv,
   );
+  const providers = localProvider ? {
+    local: {
+      baseUrl: localProvider.baseUrl,
+      api: "openai-completions",
+      // Keep secrets in the child environment, where Pi treats their values literally.
+      apiKey: "PAPERCLIP_PI_LOCAL_API_KEY",
+      models: [{ id: localProvider.modelId }],
+    },
+  } : parsed.providers;
+  const warning = parsed.warning;
   if (!providers) {
     return {
       env: input.env,
@@ -140,7 +181,7 @@ export async function preparePiRuntimeConfig(input: {
     await fs.writeFile(
       path.join(agentConfigDir, "models.json"),
       `${JSON.stringify({ providers }, null, 2)}\n`,
-      "utf8",
+      { encoding: "utf8", mode: 0o600 },
     );
   } catch (err) {
     // Never leak the temp dir when the write fails (e.g. disk-full): the
@@ -152,11 +193,18 @@ export async function preparePiRuntimeConfig(input: {
   return {
     env: {
       ...input.env,
+      ...(localProvider ? {
+        PI_OFFLINE: "1",
+        // A local endpoint never receives the server owner's ambient provider key.
+        PAPERCLIP_PI_LOCAL_API_KEY: input.env.OPENAI_API_KEY || "paperclip-local-no-auth",
+      } : {}),
       PI_CODING_AGENT_DIR: agentConfigDir,
     },
     notes: [
       ...(warning ? [warning] : []),
-      `Injected ${Object.keys(providers).length} custom Pi provider(s) from PAPERCLIP_PI_PROVIDERS into a managed models.json: ${Object.keys(providers).join(", ")}.`,
+      localProvider
+        ? "Configured the agent's OpenAI-compatible endpoint in a managed Pi models.json."
+        : `Injected ${Object.keys(providers).length} custom Pi provider(s) from PAPERCLIP_PI_PROVIDERS into a managed models.json: ${Object.keys(providers).join(", ")}.`,
     ],
     agentConfigDir,
     cleanup: async () => {

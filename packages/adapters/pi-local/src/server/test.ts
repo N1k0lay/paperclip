@@ -3,6 +3,9 @@ import type {
   AdapterEnvironmentTestContext,
   AdapterEnvironmentTestResult,
 } from "@paperclipai/adapter-utils";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import {
   asString,
   parseObject,
@@ -18,10 +21,13 @@ import {
   runAdapterExecutionTargetProcess,
   describeAdapterExecutionTarget,
   resolveAdapterExecutionTargetCwd,
+  prepareAdapterExecutionTargetRuntime,
+  overrideAdapterExecutionTargetRemoteCwd,
 } from "@paperclipai/adapter-utils/execution-target";
 import { discoverPiModelsCached } from "./models.js";
 import { parsePiJsonl } from "./parse.js";
 import { SANDBOX_INSTALL_COMMAND } from "../index.js";
+import { preparePiRuntimeConfig, resolvePiLocalProvider } from "./runtime-config.js";
 
 function summarizeStatus(checks: AdapterEnvironmentCheck[]): AdapterEnvironmentTestResult["status"] {
   if (checks.some((check) => check.level === "error")) return "fail";
@@ -80,6 +86,74 @@ function buildPiModelDiscoveryFailureCheck(message: string): AdapterEnvironmentC
 
 export async function testEnvironment(
   ctx: AdapterEnvironmentTestContext,
+): Promise<AdapterEnvironmentTestResult> {
+  const config = parseObject(ctx.config);
+  let prepared: Awaited<ReturnType<typeof preparePiRuntimeConfig>>;
+  try {
+    if (!resolvePiLocalProvider(config)) throw new Error("Укажите URL локального или корпоративного OpenAI-совместимого API.");
+    prepared = await preparePiRuntimeConfig({ env: normalizeEnv(config.env), config });
+  } catch (err) {
+    return {
+      adapterType: ctx.adapterType,
+      status: "fail",
+      checks: [{ code: "pi_provider_config_invalid", level: "error", message: err instanceof Error ? err.message : "Invalid local provider configuration." }],
+      testedAt: new Date().toISOString(),
+    };
+  }
+
+  let remoteRuntime: Awaited<ReturnType<typeof prepareAdapterExecutionTargetRuntime>> | undefined;
+  let workspace: string | undefined;
+  try {
+    let target = ctx.executionTarget ?? null;
+    if (target?.kind === "remote" && prepared.agentConfigDir) {
+      workspace = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-pi-envtest-"));
+      remoteRuntime = await prepareAdapterExecutionTargetRuntime({
+        runId: path.basename(workspace),
+        target,
+        adapterKey: "pi",
+        workspaceLocalDir: workspace,
+        workspaceRemoteDir: resolveAdapterExecutionTargetCwd(target, asString(config.cwd, ""), process.cwd()),
+        syncWorkspace: false,
+        workspaceRestoreRetryDelaysMs: [],
+        assets: [{ key: "agentConfig", localDir: prepared.agentConfigDir }],
+      });
+      const remoteConfigDir = remoteRuntime.assetDirs.agentConfig;
+      if (!remoteConfigDir) throw new Error("Pi provider configuration was not staged to the execution target.");
+      prepared.env.PI_CODING_AGENT_DIR = remoteConfigDir;
+      target = overrideAdapterExecutionTargetRemoteCwd(target, remoteRuntime.workspaceRemoteDir ?? target.remoteCwd) ?? null;
+    }
+    const localProvider = resolvePiLocalProvider(config);
+    const result = await testPiEnvironment({
+      ...ctx,
+      executionTarget: target,
+      config: {
+        ...config,
+        env: prepared.env,
+        ...(localProvider ? { model: `local/${localProvider.modelId}` } : {}),
+      },
+    }, Boolean(localProvider));
+    const apiKey = prepared.env.OPENAI_API_KEY;
+    if (apiKey) {
+      for (const check of result.checks) {
+        for (const key of ["message", "detail", "hint"] as const) {
+          if (check[key]) check[key] = check[key].split(apiKey).join("[REDACTED]");
+        }
+      }
+    }
+    return result;
+  } finally {
+    try {
+      await remoteRuntime?.restoreWorkspace();
+    } finally {
+      await prepared.cleanup();
+      if (workspace) await fs.rm(workspace, { recursive: true, force: true });
+    }
+  }
+}
+
+async function testPiEnvironment(
+  ctx: AdapterEnvironmentTestContext,
+  localProvider: boolean,
 ): Promise<AdapterEnvironmentTestResult> {
   const checks: AdapterEnvironmentCheck[] = [];
   const config = parseObject(ctx.config);
@@ -168,7 +242,7 @@ export async function testEnvironment(
   // Pi model discovery shells out to `pi --list-models` locally; when probing a
   // remote target we skip discovery and let the remote hello probe surface
   // model/auth issues directly.
-  if (!targetIsRemote && canRunProbe) {
+  if (!targetIsRemote && canRunProbe && !localProvider) {
     try {
       const discovered = await discoverPiModelsCached({ command, cwd, env: runtimeEnv });
       if (discovered.length > 0) {
@@ -202,6 +276,8 @@ export async function testEnvironment(
       message: "Pi requires a configured model in provider/model format.",
       hint: "Set adapterConfig.model using an ID from `pi --list-models`.",
     });
+  } else if (localProvider) {
+    checks.push({ code: "pi_model_configured", level: "info", message: `Configured local model: ${configuredModel}` });
   } else if (targetIsRemote) {
     checks.push({
       code: "pi_model_validation_skipped_remote",
@@ -304,10 +380,14 @@ export async function testEnvironment(
       } else if (PI_AUTH_REQUIRED_RE.test(authEvidence)) {
         checks.push({
           code: "pi_hello_probe_auth_required",
-          level: "warn",
-          message: "Pi is installed, but provider authentication is not ready.",
+          level: localProvider ? "error" : "warn",
+          message: localProvider
+            ? "The endpoint rejected authentication. Check its API key."
+            : "Pi is installed, but provider authentication is not ready.",
           ...(detail ? { detail } : {}),
-          hint: "Set provider API key environment variable (e.g., ANTHROPIC_API_KEY, XAI_API_KEY) and retry.",
+          hint: localProvider
+            ? "Check the endpoint URL and its OPENAI_API_KEY secret binding, then retry."
+            : "Set provider API key environment variable (e.g., ANTHROPIC_API_KEY, XAI_API_KEY) and retry.",
         });
       } else {
         checks.push({

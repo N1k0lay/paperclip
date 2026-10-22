@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Paperclip",
-  "short_name": "Paperclip",
-  "description": "AI-powered project management and agent coordination platform",
+  "name": "Сказ",
+  "short_name": "Сказ",
+  "description": "Управление проектами и совместной работой ИИ-агентов",
   "start_url": "/",
   "scope": "/",
   "display": "browser",

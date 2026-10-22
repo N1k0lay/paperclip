@@ -1,5 +1,12 @@
 # Telemetry Data Contract
 
+In the Skrepka fork, first-party telemetry is disabled by default. It is enabled
+only by an explicit `telemetry.enabled: true` in the instance configuration.
+Configuration parsing and new CLI onboarding both default this field to `false`.
+`PAPERCLIP_TELEMETRY_DISABLED=1`, `DO_NOT_TRACK=1`, and CI still override that opt-in.
+The `pnpm skrepka` launcher always disables telemetry. Event names, dimensions,
+and the generated transport contract are unchanged.
+
 This document explains how contributors should use Paperclip's public telemetry
 contract. It does not duplicate the full list of individual events or
 dimensions. It documents extra semantic and privacy rules where the generated

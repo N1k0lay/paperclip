@@ -37,7 +37,7 @@ describe("fillFirstTaskPlaceholders", () => {
 describe("renderOnboardingFirstTaskGreeting", () => {
   it("renders the board-approved greeting with the agent name", async () => {
     const greeting = await renderOnboardingFirstTaskGreeting({ agentName: "Ada" });
-    expect(greeting).toContain("Welcome to Paperclip! I'm Ada, your first agent teammate.");
+    expect(greeting).toContain("Добро пожаловать в Сказ! Я Ada, ваш первый ИИ-помощник.");
     // The "what would you like to do" question moved onto the opening card.
     expect(greeting).not.toContain("What would you like to do?");
   });
@@ -48,22 +48,22 @@ describe("buildOnboardingFirstTaskOpeningQuestion", () => {
     const payload = await buildOnboardingFirstTaskOpeningQuestion();
     expect(payload.version).toBe(1);
     expect(payload.supersedeOnUserComment).toBe(true);
-    expect(payload.submitLabel).toBe("Continue");
+    expect(payload.submitLabel).toBe("Продолжить");
     expect(payload.questions).toHaveLength(1);
     const [question] = payload.questions;
     expect(question.id).toBe(ONBOARDING_FIRST_TASK_OPENING_QUESTION_ID);
     expect(question.selectionMode).toBe("single");
     expect(question.required).toBe(true);
-    expect(question.prompt).toBe("What would you like to do?");
+    expect(question.prompt).toBe("С чего начнём?");
     expect(question.options.map((option) => option.id)).toEqual([
       ONBOARDING_FIRST_TASK_OPENING_INTERVIEW_OPTION_ID,
       ONBOARDING_FIRST_TASK_OPENING_TASK_OPTION_ID,
     ]);
     expect(question.options[0].label).toBe(
-      "Interview me and propose a plan and an agent team to execute it.",
+      "Обсудить задачу и подготовить план",
     );
     expect(question.options[0].freeText).toBeUndefined();
-    expect(question.options[1].label).toBe("I have a task in mind");
+    expect(question.options[1].label).toBe("У меня уже есть задача");
     expect(question.options[1].freeText).toBe(true);
   });
 });

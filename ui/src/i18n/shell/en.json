@@ -1,0 +1,194 @@
+{
+  "nav": {
+    "newTask": "New Task",
+    "home": "Home",
+    "search": "Search",
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
+    "chat": "Chat",
+    "decisions": "Decisions",
+    "status": "Status",
+    "conferenceRoom": "Conference Room",
+    "work": "Work",
+    "tasks": "Tasks",
+    "projects": "Projects",
+    "routines": "Routines",
+    "artifacts": "Artifacts",
+    "cases": "Cases",
+    "goals": "Goals",
+    "workspaces": "Workspaces",
+    "organization": "Organization",
+    "org": "Org",
+    "agents": "Agents",
+    "skills": "Skills",
+    "connectors": "Connectors",
+    "audit": "Audit",
+    "timeline": "Timeline",
+    "costs": "Costs",
+    "activity": "Activity",
+    "commentary": "Commentary",
+    "settings": "Settings",
+    "unread": "unread",
+    "decisionsBadge": "decisions",
+    "mobileNavigation": "Mobile navigation",
+    "recentTasks": "Recent Tasks",
+    "idle": "Idle",
+    "seeAllAgents": "See all agents"
+  },
+  "account": {
+    "board": "Board",
+    "signedIn": "Signed in",
+    "localBoard": "Local workspace board",
+    "openMenu": "Open account menu",
+    "title": "Account",
+    "viewProfile": "View profile",
+    "invite": "Invite",
+    "documentation": "Documentation",
+    "signingOut": "Signing out...",
+    "signOut": "Sign out",
+    "feedback": "Share feedback",
+    "viewCommit": "View commit {{commit}} on GitHub"
+  },
+  "company": {
+    "reorder": "Reorder {{name}}",
+    "openNamedSwitcher": "Open {{name}} organization switcher",
+    "openSwitcher": "Open organization switcher",
+    "select": "Select organization",
+    "organizations": "Organizations",
+    "done": "Done",
+    "edit": "Edit",
+    "loadFailed": "Couldn't load organizations",
+    "retry": "Try again",
+    "empty": "No organizations",
+    "create": "Create organization",
+    "inviteNamed": "Invite people to {{name}}",
+    "invite": "Invite people"
+  },
+  "theme": {
+    "light": "Switch to light mode",
+    "dark": "Switch to dark mode",
+    "description": "Toggle the app appearance."
+  },
+  "collections": {
+    "newAgent": "New agent",
+    "agentActions": "Agents section actions",
+    "browseAgents": "Browse agents",
+    "agentSort": "Agent sort",
+    "newProject": "New project",
+    "projectActions": "Projects section actions",
+    "browseProjects": "Browse projects",
+    "projectSort": "Project sort",
+    "top": "Top",
+    "alphabetical": "Alphabetical",
+    "recent": "Recent"
+  },
+  "recentTask": {
+    "moreActions": "More actions for {{name}}",
+    "rename": "Rename",
+    "archive": "Archive",
+    "pauseRestart": "Pause/Restart",
+    "renameTitle": "Rename task",
+    "renameDescription": "Choose a short, clear name for this task.",
+    "name": "Task name",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save"
+  },
+  "server": {
+    "unavailable": "Unavailable",
+    "commitUnavailable": "Commit unavailable",
+    "changesUnavailable": "Change status unavailable",
+    "clean": "Clean checkout",
+    "localChanges": "Local changes present",
+    "localChangesDetail": "Local changes present ({{details}})",
+    "staged": "staged",
+    "unstaged": "unstaged",
+    "untracked": "untracked",
+    "healthUnavailable": "Health unavailable",
+    "loading": "Loading...",
+    "title": "Server",
+    "lastRestarted": "Last restarted",
+    "runningCommit": "Running commit",
+    "checkout": "Checkout state"
+  },
+  "auth": {
+    "failed": "Authentication failed",
+    "checkFailed": "Unable to check sign-in. Refresh and try again.",
+    "signInTitle": "Sign in to Skaz",
+    "signUpTitle": "Create your Skaz account",
+    "signInDescription": "Use your email and password to access this instance.",
+    "signUpDescription": "Create an account for this instance. Email confirmation is not required in v1.",
+    "required": "Please fill in all required fields.",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "working": "Working…",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "needAccount": "Need an account?",
+    "haveAccount": "Already have an account?",
+    "createOne": "Create one",
+    "signInLink": "Sign in"
+  },
+  "runtimeTest": {
+    "connection": {
+      "idle": {
+        "title": "Test your agent",
+        "description": "Check that your runtime and model can respond.",
+        "action": "Run test"
+      },
+      "running": {
+        "title": "Testing connection",
+        "description": "Checking the runtime and waiting for a model response…",
+        "action": "Testing…"
+      },
+      "pass": {
+        "title": "Connection successful",
+        "description": "Your runtime checks passed. Review the details below.",
+        "action": "Test again"
+      },
+      "warn": {
+        "title": "Connection needs attention",
+        "description": "Review the test details before running your agent.",
+        "action": "Test again"
+      },
+      "fail": {
+        "title": "Couldn't connect",
+        "description": "Check your model and provider connection, then try again.",
+        "action": "Retry test"
+      }
+    },
+    "prerequisites": {
+      "idle": {
+        "title": "Check prerequisites",
+        "description": "Check instance settings and public connection configuration.",
+        "action": "Check setup"
+      },
+      "running": {
+        "title": "Checking prerequisites",
+        "description": "Checking instance settings and public connection configuration…",
+        "action": "Checking…"
+      },
+      "pass": {
+        "title": "Setup checks passed",
+        "description": "Review the setup details before assigning work.",
+        "action": "Check again"
+      },
+      "warn": {
+        "title": "Pairing required",
+        "description": "Create this agent, then pair it and verify event delivery.",
+        "action": "Check again"
+      },
+      "fail": {
+        "title": "Prerequisite check failed",
+        "description": "Review the setup details and retry.",
+        "action": "Retry check"
+      }
+    },
+    "runtimeMissing": "Runtime missing",
+    "metadataIdle": "Verify your saved token, runtime installation, and selected model without sending a model prompt.",
+    "metadataRunning": "Checking the saved token, runtime, and selected model…",
+    "label": "Runtime test",
+    "details": "Test details"
+  }
+}

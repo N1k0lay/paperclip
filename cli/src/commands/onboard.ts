@@ -31,7 +31,6 @@ import {
 import { ensureAgentJwtSecret, ensureToolActionSigningSecret, resolveAgentJwtEnvFile } from "../config/env.js";
 import { ensureLocalSecretsKeyFile } from "../config/secrets-key.js";
 import { promptDatabase } from "../prompts/database.js";
-import { promptLlm } from "../prompts/llm.js";
 import { promptLogging } from "../prompts/logging.js";
 import { defaultSecretsConfig } from "../prompts/secrets.js";
 import { defaultStorageConfig, promptStorage } from "../prompts/storage.js";
@@ -71,6 +70,9 @@ type OnboardOptions = {
 };
 
 type OnboardDefaults = Pick<PaperclipConfig, "database" | "logging" | "server" | "auth" | "storage" | "secrets">;
+
+const AGENT_MODEL_SETUP_MESSAGE =
+  "URL API, модель и ключ задаются в веб-мастере создания агента Сказ.";
 
 const TAILNET_BIND_WARNING =
   "No Tailscale address was detected during setup. The saved config will stay on loopback until Tailscale is available or PAPERCLIP_TAILNET_BIND_HOST is set.";
@@ -469,7 +471,7 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
       [
         "Existing config preserved",
         `Database: ${existingConfig.database.mode}`,
-        existingConfig.llm ? `LLM: ${existingConfig.llm.provider}` : "LLM: not configured",
+        AGENT_MODEL_SETUP_MESSAGE,
         `Logging: ${existingConfig.logging.mode} -> ${existingConfig.logging.logDir}`,
         `Server: ${existingConfig.server.deploymentMode}/${existingConfig.server.exposure} @ ${describeServerBinding(existingConfig.server)}`,
         `Allowed hosts: ${existingConfig.server.allowedHostnames.length > 0 ? existingConfig.server.allowedHostnames.join(", ") : "(loopback only)"}`,
@@ -552,7 +554,6 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
   const tc = getTelemetryClient();
   if (tc) trackInstallStarted(tc);
 
-  let llm: PaperclipConfig["llm"] | undefined;
   const { defaults: derivedDefaults, usedEnvKeys, ignoredEnvKeys } = quickstartDefaultsFromEnv({
     preferTrustedLocal: opts.yes === true && !opts.bind,
   });
@@ -592,51 +593,6 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
         s.stop("Database connection successful");
       } catch {
         s.stop(pc.yellow("Could not connect to database — you can fix this later with `paperclipai doctor`"));
-      }
-    }
-
-    p.log.step(pc.bold("LLM Provider"));
-    llm = await promptLlm();
-
-    if (llm?.apiKey) {
-      const s = p.spinner();
-      s.start("Validating API key...");
-      try {
-        if (llm.provider === "claude") {
-          const res = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-              "x-api-key": llm.apiKey,
-              "anthropic-version": "2023-06-01",
-              "content-type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "claude-sonnet-4-5-20250929",
-              max_tokens: 1,
-              messages: [{ role: "user", content: "hi" }],
-            }),
-          });
-          if (res.ok || res.status === 400) {
-            s.stop("API key is valid");
-          } else if (res.status === 401) {
-            s.stop(pc.yellow("API key appears invalid — you can update it later"));
-          } else {
-            s.stop(pc.yellow("Could not validate API key — continuing anyway"));
-          }
-        } else {
-          const res = await fetch("https://api.openai.com/v1/models", {
-            headers: { Authorization: `Bearer ${llm.apiKey}` },
-          });
-          if (res.ok) {
-            s.stop("API key is valid");
-          } else if (res.status === 401) {
-            s.stop(pc.yellow("API key appears invalid — you can update it later"));
-          } else {
-            s.stop(pc.yellow("Could not validate API key — continuing anyway"));
-          }
-        }
-      } catch {
-        s.stop(pc.yellow("Could not reach API — continuing anyway"));
       }
     }
 
@@ -704,13 +660,12 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
       updatedAt: new Date().toISOString(),
       source: "onboard",
     },
-    ...(llm && { llm }),
     database,
     logging,
     server,
     auth,
     telemetry: {
-      enabled: true,
+      enabled: false,
     },
     storage,
     secrets,
@@ -734,7 +689,7 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
   p.note(
     [
       `Database: ${database.mode}`,
-      llm ? `LLM: ${llm.provider}` : "LLM: not configured",
+      AGENT_MODEL_SETUP_MESSAGE,
       `Logging: ${logging.mode} -> ${logging.logDir}`,
       `Server: ${server.deploymentMode}/${server.exposure} @ ${describeServerBinding(server)}`,
       `Allowed hosts: ${server.allowedHostnames.length > 0 ? server.allowedHostnames.join(", ") : "(loopback only)"}`,

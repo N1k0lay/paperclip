@@ -17,6 +17,7 @@ import {
   Terminal,
   Cpu,
 } from "lucide-react";
+import { SkazMark } from "@/components/PaperclipLockup";
 import { OpenCodeLogoIcon } from "@/components/OpenCodeLogoIcon";
 
 // ---------------------------------------------------------------------------
@@ -120,9 +121,9 @@ const adapterDisplayMap: Record<string, AdapterDisplayInfo> = {
     icon: OpenCodeLogoIcon,
   },
   pi_local: {
-    label: "Pi",
-    description: "Pi harness",
-    icon: Terminal,
+    label: "Сказ API",
+    description: "Локальный / корпоративный API",
+    icon: SkazMark,
   },
   cursor: {
     label: "Cursor",

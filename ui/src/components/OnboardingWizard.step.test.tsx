@@ -237,7 +237,7 @@ describe("OnboardingWizard — which step it lands on", () => {
       return (
         [...document.querySelectorAll(".sr-only")]
           .map((element) => element.textContent?.trim() ?? "")
-          .find((text) => /^Step \d+ of \d+$/.test(text)) ?? null
+          .find((text) => /^Шаг \d+ из \d+$/.test(text)) ?? null
       );
     }
 
@@ -250,7 +250,7 @@ describe("OnboardingWizard — which step it lands on", () => {
       await settle();
 
       expect(currentStep()).toBe("agent");
-      expect(announcedCount()).toBe("Step 2 of 4");
+      expect(announcedCount()).toBe("Шаг 2 из 4");
     });
 
     it("counts three on a self-hosted company that has no agents yet", async () => {
@@ -265,7 +265,7 @@ describe("OnboardingWizard — which step it lands on", () => {
       await settle();
 
       expect(currentStep()).toBe("agent");
-      expect(announcedCount()).toBe("Step 1 of 3");
+      expect(announcedCount()).toBe("Шаг 1 из 3");
     });
   });
 
@@ -375,7 +375,7 @@ describe("OnboardingWizard — which step it lands on", () => {
     await settle();
     await act(async () => {
       [...document.body.querySelectorAll("button")]
-        .find((b) => b.textContent?.trim() === "Continue")!
+        .find((b) => b.textContent?.trim() === "Продолжить")!
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     await settle();
@@ -418,7 +418,7 @@ describe("OnboardingWizard — which step it lands on", () => {
     setControlledValue(nameInput, "Initech");
     await settle();
     const next = [...document.body.querySelectorAll("button")].find(
-      (b) => b.textContent?.trim() === "Continue",
+      (b) => b.textContent?.trim() === "Продолжить",
     )!;
     await act(async () => {
       next.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -443,7 +443,7 @@ describe("OnboardingWizard — which step it lands on", () => {
     expect(currentStep()).toBe("agent");
     expect(companyState.setSelectedCompanyId).not.toHaveBeenCalled();
     expect(document.body.textContent).toContain(
-      "Organization created, but onboarding switched to another organization.",
+      "Организация создана, но настройка уже открыта для другой организации.",
     );
   });
 
@@ -467,7 +467,7 @@ describe("OnboardingWizard — which step it lands on", () => {
     setControlledValue(nameInput, "Initech");
     await settle();
     const next = [...document.body.querySelectorAll("button")].find(
-      (button) => button.textContent?.trim() === "Continue",
+      (button) => button.textContent?.trim() === "Продолжить",
     )!;
     await act(async () => {
       next.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -567,7 +567,7 @@ describe("OnboardingWizard — which step it lands on", () => {
     function stepCta(): HTMLButtonElement {
       const cta = [...document.body.querySelectorAll("button")].find((b) => {
         const text = b.textContent?.trim();
-        return text === "Next" || text === "Connect";
+        return text === "Далее" || text === "Подключить";
       });
       expect(cta, "the step should render its forward button").toBeTruthy();
       return cta as HTMLButtonElement;
@@ -580,9 +580,13 @@ describe("OnboardingWizard — which step it lands on", () => {
      * the tiles carry whatever it happens to return.
      */
     async function pickModelSource() {
-      const tiles = [...document.body.querySelectorAll("button[aria-checked]")];
-      expect(tiles.length, "the connect step should offer a source").toBeGreaterThan(0);
-      await press(tiles[0]!);
+      const localUrl = document.querySelector<HTMLInputElement>('[aria-label="URL API"]');
+      expect(localUrl).toBeTruthy();
+      await act(async () => {
+        setControlledValue(localUrl!, "http://localhost:11434/v1");
+        setControlledValue(document.querySelector<HTMLInputElement>('[aria-label="Модель"]')!, "qwen3:8b");
+      });
+      await settle();
     }
 
     it("hires under the neutral role, with the name the customer typed", async () => {
@@ -610,7 +614,7 @@ describe("OnboardingWizard — which step it lands on", () => {
       await openOnAgentStep();
 
       const back = [...document.body.querySelectorAll("button")].find((b) =>
-        b.textContent?.includes("Back"),
+        b.textContent?.includes("Назад"),
       );
       expect(back).toBeUndefined();
 
@@ -619,7 +623,7 @@ describe("OnboardingWizard — which step it lands on", () => {
       // every one of them is inert — asserted over the whole set rather than
       // one segment, since a single enabled one is the whole defect.
       const segments = [...document.body.querySelectorAll("button")].filter((b) =>
-        ["Create your first agent", "Connect a model", "Review"].includes(
+        ["Создание агента", "Подключение модели", "Готово"].includes(
           b.getAttribute("aria-label") ?? "",
         ),
       ) as HTMLButtonElement[];
@@ -627,7 +631,7 @@ describe("OnboardingWizard — which step it lands on", () => {
       expect(segments.every((segment) => segment.disabled)).toBe(true);
 
       // And company creation is genuinely unreachable, not merely unlinked.
-      expect(document.body.textContent).not.toContain("Name your organization");
+      expect(document.body.textContent).not.toContain("Название организации");
     });
   });
 });

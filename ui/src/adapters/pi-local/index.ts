@@ -5,7 +5,7 @@ import { buildPiLocalConfig } from "@paperclipai/adapter-pi-local/ui";
 
 export const piLocalUIAdapter: UIAdapterModule = {
   type: "pi_local",
-  label: "Pi",
+  label: "Сказ API",
   parseStdoutLine: parsePiStdoutLine,
   ConfigFields: PiLocalConfigFields,
   buildAdapterConfig: buildPiLocalConfig,

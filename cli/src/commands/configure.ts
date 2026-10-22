@@ -13,7 +13,6 @@ import {
 } from "../config/schema.js";
 import { ensureLocalSecretsKeyFile } from "../config/secrets-key.js";
 import { promptDatabase } from "../prompts/database.js";
-import { promptLlm } from "../prompts/llm.js";
 import { promptLogging } from "../prompts/logging.js";
 import { defaultSecretsConfig, promptSecrets } from "../prompts/secrets.js";
 import { defaultStorageConfig, promptStorage } from "../prompts/storage.js";
@@ -29,7 +28,7 @@ import { printPaperclipCliBanner } from "../utils/banner.js";
 type Section = "llm" | "database" | "logging" | "server" | "storage" | "secrets";
 
 const SECTION_LABELS: Record<Section, string> = {
-  llm: "LLM Provider",
+  llm: "Модель агента",
   database: "Database",
   logging: "Logging",
   server: "Server",
@@ -168,13 +167,9 @@ export async function configure(opts: {
         config.database = await promptDatabase(config.database);
         break;
       case "llm": {
-        const llm = await promptLlm();
-        if (llm) {
-          config.llm = llm;
-        } else {
-          delete config.llm;
-        }
-        break;
+        p.log.info("URL API, модель и ключ задаются в веб-мастере создания агента Сказ.");
+        p.outro("Конфигурация сохранена без изменений.");
+        return;
       }
       case "logging":
         config.logging = await promptLogging();

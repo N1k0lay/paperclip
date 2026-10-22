@@ -89,8 +89,8 @@ describeEmbeddedPostgres("heartbeat queued-run claim isolation", () => {
       name: "Claim Isolation Agent",
       role: "engineer",
       status: "idle",
-      adapterType: "codex_local",
-      adapterConfig: {},
+      adapterType: "pi_local",
+      adapterConfig: { baseUrl: "http://127.0.0.1:11434/v1", model: "local/test-model" },
       runtimeConfig: {
         heartbeat: {
           enabled: true,
@@ -236,7 +236,7 @@ describeEmbeddedPostgres("heartbeat queued-run claim isolation", () => {
     const { runId } = await insertClaimableRun(companyId, agentId);
     const [hold] = await db.insert(externalAgentHolds).values({ companyId, agentId, provider: "muse", assignmentId: randomUUID(), bindingId: randomUUID(),
       bindingGeneration: 1, runId: randomUUID(), workerUnknown: barrier === "worker", nativeEffectsUnknown: barrier === "native-effects" }).returning();
-    // The agent now uses Codex; old external uncertainty still owns admission.
+    // The agent now uses Pi; old external uncertainty still owns admission.
     await heartbeat.resumeQueuedRuns();
     await heartbeat.drainActiveRunExecutions();
     expect(await runStatus(runId)).toMatchObject({ status: "queued" });

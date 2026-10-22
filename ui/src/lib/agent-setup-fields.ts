@@ -23,7 +23,7 @@ export const HERMES_PROVIDER_KEYS: Record<string, string> = {
 };
 
 export function setupProviderKeys(adapter: string) {
-  return adapter === "hermes_local" ? HERMES_PROVIDER_KEYS : PROVIDER_ENV_KEYS;
+  return adapter === "hermes_local" ? HERMES_PROVIDER_KEYS : adapter === "pi_local" ? { local: "OPENAI_API_KEY" } : PROVIDER_ENV_KEYS;
 }
 
 export function setupEfforts(adapter: string, model = ""): string[] {

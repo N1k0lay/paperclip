@@ -1,3 +1,9 @@
+# Сказ
+
+Русская версия Paperclip для локальных и корпоративных OpenAI-совместимых моделей.
+[Запуск и настройка на русском](README.ru.md). Быстрый старт: `corepack pnpm skrepka`
+после `corepack pnpm install --frozen-lockfile`.
+
 <p align="center">
   <img src="doc/assets/banner.jpg" alt="Paperclip is the app people use to manage AI agents for work." width="720" />
 </p>

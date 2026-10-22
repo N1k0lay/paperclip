@@ -1,6 +1,6 @@
 import type { Goal, Project } from "@paperclipai/shared";
 
-export const ONBOARDING_PROJECT_NAME = "Onboarding";
+export const ONBOARDING_PROJECT_NAME = "Начало работы";
 
 function goalCreatedAt(goal: Goal) {
   const createdAt = goal.createdAt instanceof Date ? goal.createdAt : new Date(goal.createdAt);
@@ -39,7 +39,7 @@ export function selectReusableOnboardingProject<T extends Pick<Project, "name" |
     projects.find(
       (project) =>
         project.status !== "cancelled" &&
-        project.name.trim().toLowerCase() === ONBOARDING_PROJECT_NAME.toLowerCase(),
+        [ONBOARDING_PROJECT_NAME.toLowerCase(), "onboarding"].includes(project.name.trim().toLowerCase()),
     ) ?? null
   );
 }

@@ -158,8 +158,8 @@ describeEmbeddedPostgres("heartbeat responsible-user invariant", () => {
       name: "CodexCoder",
       role: "engineer",
       status: "active",
-      adapterType: "codex_local",
-      adapterConfig: {},
+      adapterType: "pi_local",
+      adapterConfig: { baseUrl: "http://127.0.0.1:11434/v1", model: "local/test-model" },
       runtimeConfig: { heartbeat: { wakeOnDemand: true, maxConcurrentRuns: 1 } },
       permissions: {},
     });
@@ -522,8 +522,8 @@ describeEmbeddedPostgres("heartbeat responsible-user invariant", () => {
       name: "CodexCoder",
       role: "engineer",
       status: "active",
-      adapterType: "codex_local",
-      adapterConfig: {},
+      adapterType: "pi_local",
+      adapterConfig: { baseUrl: "http://127.0.0.1:11434/v1", model: "local/test-model" },
       runtimeConfig: { heartbeat: { wakeOnDemand: true } },
       permissions: {},
     });
@@ -570,8 +570,8 @@ describeEmbeddedPostgres("heartbeat responsible-user invariant", () => {
       name: "CodexCoder",
       role: "engineer",
       status: "active",
-      adapterType: "codex_local",
-      adapterConfig: {},
+      adapterType: "pi_local",
+      adapterConfig: { baseUrl: "http://127.0.0.1:11434/v1", model: "local/test-model" },
       runtimeConfig: { heartbeat: { wakeOnDemand: true } },
       permissions: {},
     });

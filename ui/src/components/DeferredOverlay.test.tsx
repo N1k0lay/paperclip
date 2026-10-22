@@ -24,12 +24,12 @@ it("dismisses a failed chunk without replacing the board or its draft", async ()
   const Failed = lazy(async () => { throw new Error("Chunk download failed"); });
   function Board() {
     const [requested, setRequested] = useState(true);
-    return <><textarea defaultValue="Keep my unsent reply" /><DeferredOverlay requested={requested} title="New task" onClose={() => setRequested(false)}><Failed /></DeferredOverlay></>;
+    return <><textarea defaultValue="Keep my unsent reply" /><DeferredOverlay requested={requested} title="Новая задача" onClose={() => setRequested(false)}><Failed /></DeferredOverlay></>;
   }
   await act(async () => root.render(<Board />));
   const draft = container.querySelector("textarea")!;
-  expect(document.body.textContent).toContain("Couldn't open new task");
-  const close = [...document.querySelectorAll("button")].find((button) => button.textContent === "Close")!;
+  expect(document.body.textContent).toContain("Не удалось открыть: Новая задача");
+  const close = [...document.querySelectorAll("button")].find((button) => button.textContent === "Закрыть")!;
   await act(async () => close.click());
   expect(document.querySelector('[role="dialog"]')).toBeNull();
   expect(container.querySelector("textarea")).toBe(draft);
@@ -40,10 +40,10 @@ it("removes a pending overlay on navigation and contains a later rejection", asy
   let reject!: (error: Error) => void;
   const Pending = lazy(() => new Promise<never>((_, rejectImport) => { reject = rejectImport; }));
   function render(requested: boolean) {
-    return <><textarea defaultValue="Saved draft" /><DeferredOverlay requested={requested} title="Setup" onClose={() => {}}><Pending /></DeferredOverlay></>;
+    return <><textarea defaultValue="Saved draft" /><DeferredOverlay requested={requested} title="Настройка" onClose={() => {}}><Pending /></DeferredOverlay></>;
   }
   await act(async () => root.render(render(true)));
-  expect(document.body.textContent).toContain("Loading setup");
+  expect(document.body.textContent).toContain("Загрузка: Настройка");
   const draft = container.querySelector("textarea");
   await act(async () => root.render(render(false)));
   expect(document.querySelector('[role="dialog"]')).toBeNull();
@@ -58,7 +58,7 @@ it("allows cancelling an in-flight download", async () => {
     return <DeferredOverlay requested={requested} title="New project" onClose={() => setRequested(false)}><Pending /></DeferredOverlay>;
   }
   await act(async () => root.render(<Board />));
-  const cancel = [...document.querySelectorAll("button")].find((button) => button.textContent === "Cancel")!;
+  const cancel = [...document.querySelectorAll("button")].find((button) => button.textContent === "Отмена")!;
   await act(async () => cancel.click());
   expect(document.querySelector('[role="dialog"]')).toBeNull();
 });
